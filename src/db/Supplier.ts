@@ -5,16 +5,16 @@ export class Supplier {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ default: "" })
   username: string;
 
-  @Column()
+  @Column({ default: "" })
   email: string;
 
-  @Column()
+  @Column({ default: "" })
   password: string;
 
-  @Column()
+  @Column({ default: "" })
   supplier_code: string;
 
   @Column({ unique: true })

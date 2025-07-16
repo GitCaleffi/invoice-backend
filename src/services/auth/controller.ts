@@ -5,8 +5,6 @@ import {
   HTTP403Error,
 } from "../../utils/httpErrors";
 import express, { Request, Response, NextFunction } from 'express';
-
-import config from "config";
 import { CommonUtilities } from "../../utils/CommonUtilities";
 import * as bcrypt from "bcrypt";
 import ejs from "ejs";
@@ -18,43 +16,62 @@ import { MailerUtilities } from "../../utils/MailerUtilities";
 import 'dotenv/config';
 
 
-
-//  new supplier register api  //
-export const register = async (bodyData: any, res: Response, next: NextFunction) => {
+//  check email linked with account  //
+export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
-
-    // Check if supplier already exists
-    const existingSupplier = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
-    if (existingSupplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_EXISTS,
-      }));
+    const existingSupplier = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
+    if (!existingSupplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
-
-    const hashedPassword: any = await CommonUtilities.cryptPassword(bodyData.password);
-    let randomOTP = CommonUtilities.genNumericCode(6);
-
-    const supplierObj = new Supplier();
-    supplierObj.email = bodyData.email.toLowerCase();
-    supplierObj.password = hashedPassword;
-    supplierObj.otp = randomOTP;
-
-    console.log('supplierObj ===== ', supplierObj);
-    await AppDataSource.manager.save(supplierObj);
-
-    // send account verification email 
-    let messageHtml = await ejs.renderFile(
-      process.cwd() + "/src/views/accountVerify.ejs",
-      { link: process.env.accountVerifyBaseUrl + '?email=' + bodyData.email.toLowerCase() + '&otp=' + randomOTP + '&type=accountVerified' },
-      { async: true }
-    );
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email], subject: "Account Verify Link", text: messageHtml });
 
     return CommonUtilities.sendResponsData({
       code: 200,
-      message: MESSAGES.ACCOUNT_VERIFY_LINK,
+      message: MESSAGES.SUCCESS,
+      data: { emailExists: existingSupplier.email ? true : false }
+    });
+  } catch (error) {
+    next(error)
+  }
+};
+
+//  add email and password  //
+export const addEmail = async (bodyData: any, res: Response, next: NextFunction) => {
+  try {
+    const supplierRepository = AppDataSource.getRepository(Supplier);
+    const existingSupplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
+    if (!existingSupplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
+    }
+
+    existingSupplier.email = bodyData.email.toLowerCase();
+    existingSupplier.password = await CommonUtilities.cryptPassword(bodyData.password);
+
+    let supplierToken = await CommonUtilities.createJWTToken({
+      id: existingSupplier.id,
+      email: existingSupplier.email,
+      supplier_code: existingSupplier.supplier_code
+    });
+    existingSupplier.accessToken = supplierToken;
+
+    await supplierRepository.save(existingSupplier);
+
+    delete existingSupplier.password;
+
+    return CommonUtilities.sendResponsData({
+      code: 200,
+      message: MESSAGES.LOGIN_SUCCESS,
+      data: existingSupplier
     });
   } catch (error) {
     next(error)

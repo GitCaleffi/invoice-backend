@@ -1,12 +1,13 @@
 export const MESSAGES = {
+  USER_NOT_EXISTS: "This user does not exist. Please check your details",
+  SUCCESS: "Action completed successfully",
+
   REGISTER_SUCCESS: "Thank you for registering with us",
   LOGIN_SUCCESS: "You have logged in successfully",
   LOGOUT_SUCCESS: "You have logged out successfully",
   VERIFY_SUCCESS: "Your account has been verified successfully",
   USER_EXISTS: "This user already exists",
   ALREADY_VERIFIED: "Your account is already verified",
-  USER_NOT_EXISTS: "This user does not exist. Please check your details",
-  SUCCESS: "Action completed successfully",
   ACCOUNT_NOT_APPROVED: "Your account is not yet approved. Please contact support",
   USER_NOT_FOUND: "We couldn’t find a user with these details.",
   USER_DELETED: "The user has been deleted successfully",

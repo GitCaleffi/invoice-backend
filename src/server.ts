@@ -9,6 +9,7 @@ import 'dotenv/config';
 import "reflect-metadata";
 import { AppDataSource } from "./utils/ormconfig";
 import { Server } from "socket.io";
+import errorHandlers from "./middleware/errorHandlers";
 
 
 const router = express();
@@ -29,6 +30,7 @@ router.use(upload.any());
 router.use(cors({ origin: "*" }));
 
 applyRoutes(routes, router);
+applyMiddleware(errorHandlers, router);
 
 
 const PORT = process.env.PORT || 9000;
