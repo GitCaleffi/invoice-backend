@@ -44,6 +44,8 @@ export default [
     ],
   },
 
+
+
   //  verify account link  //
   {
     path: currentPathURL + '/verifyAccount',

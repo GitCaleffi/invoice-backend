@@ -80,44 +80,44 @@ export const addEmail = async (bodyData: any, res: Response, next: NextFunction)
 
 //  login api  //
 export const login = async (bodyData: any, res: Response, next: NextFunction) => {
-  try {
-    if (!bodyData.email || !bodyData.password) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.EMAIL_PASS_REQUIRED,
-      }));
+  try {    
+    if (!bodyData.supplier_code || !bodyData.password) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.LOGIN_CREDENTIAL_REQUIRED,
+        })
+      );
     }
 
     const supplierRepository = AppDataSource.getRepository(Supplier);
-    const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
+    const supplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
     const passwordMatch = await bcrypt.compare(bodyData.password, supplier.password);
     if (!passwordMatch) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.INVALID_PASSWORD,
-      }));
-    }
-
-    if (!supplier.accountVerified) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.ACCOUNT_NOT_VERIFIED,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_PASSWORD,
+        })
+      );
     }
 
     let supplierToken = await CommonUtilities.createJWTToken({
       id: supplier.id,
-      email: supplier.email
+      email: supplier.email,
+      supplier_code: supplier.supplier_code
     });
     supplier.accessToken = supplierToken;
-    await supplierRepository.save(supplier); // Saving the updated supplier
+    await supplierRepository.save(supplier);
 
     delete supplier.password;
     return CommonUtilities.sendResponsData({
@@ -130,6 +130,8 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
     next(error);
   }
 };
+
+
 
 //  verify account link  //
 export const verifyAccountLink = async (query: any, res: Response, next: NextFunction) => {
