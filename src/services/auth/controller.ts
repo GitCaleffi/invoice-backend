@@ -144,6 +144,16 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
         })
       );
     }
+
+    if (!supplier.accountVerified) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
+        })
+      );
+    }
+    
     const passwordMatch = await bcrypt.compare(bodyData.password, supplier.password);
     if (!passwordMatch) {
       throw new HTTP400Error(
