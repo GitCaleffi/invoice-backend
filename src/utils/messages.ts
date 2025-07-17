@@ -1,7 +1,7 @@
 export const MESSAGES = {
   USER_NOT_EXISTS: "This user does not exist. Please check your details",
   SUCCESS: "Action completed successfully",
-
+  LOGIN_CREDENTIAL_REQUIRED: "Supplier code and password are required",
   REGISTER_SUCCESS: "Thank you for registering with us",
   LOGIN_SUCCESS: "You have logged in successfully",
   LOGOUT_SUCCESS: "You have logged out successfully",
@@ -26,9 +26,9 @@ export const MESSAGES = {
   INAVALID_EMAIL_FORMAT: "Invalid email format",
   ACCOUNT_DELETED: "The account has been successfully deleted",
   INVALID_ID: "The provided ID is invalid or missing.",
-  EMAIL_PASS_REQUIRED: "Email and password are required.",
   ACCOUNT_VERIFY_LINK: "Account verification mail is sent with link.",
   ACCOUNT_NOT_VERIFIED: "Your account isn't verified. Check your email to verify before logging in.",
+  FORGOT_PASSWORD_LINK: "Forgot password mail is sent with link.",
   NEW_DEVICE_ADDED: "New device added successfully.",
   CSV_UPLOADED: "CSV uploaded successfully.",
   NOTIFICATION_NOT_EXISTS: "Notification not found.",

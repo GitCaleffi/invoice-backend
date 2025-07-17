@@ -35,6 +35,9 @@ export class Supplier {
   @Column({ type: "timestamp", nullable: true })
   otpExipredAt: Date;
 
+  @Column({ default: false })
+  accountVerified: boolean;
+
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;
 
