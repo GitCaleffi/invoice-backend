@@ -17,7 +17,7 @@ export class Supplier {
   @Column({ default: "" })
   supplier_code: string;
 
-  @Column({ unique: true })
+  @Column({ default: "" })
   rag_soc: string;
 
   @Column({ default: false })
