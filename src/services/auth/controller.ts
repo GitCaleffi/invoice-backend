@@ -57,30 +57,73 @@ export const addEmail = async (bodyData: any, res: Response, next: NextFunction)
     existingSupplier.email = bodyData.email.toLowerCase();
     existingSupplier.password = await CommonUtilities.cryptPassword(bodyData.password);
 
-    let supplierToken = await CommonUtilities.createJWTToken({
-      id: existingSupplier.id,
-      email: existingSupplier.email,
-      supplier_code: existingSupplier.supplier_code
-    });
-    existingSupplier.accessToken = supplierToken;
-
+    let randomOTP = CommonUtilities.genNumericCode(6);
+    existingSupplier.otp = randomOTP;
     await supplierRepository.save(existingSupplier);
 
-    delete existingSupplier.password;
+    // send account verification email 
+    let messageHtml = await ejs.renderFile(
+      process.cwd() + "/src/views/accountVerify.ejs",
+      { link: process.env.accountVerifyBaseUrl + '?email=' + bodyData.email.toLowerCase() + '&otp=' + randomOTP + '&type=accountVerified' },
+      { async: true }
+    );
+    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email], subject: "Account Verify Link", text: messageHtml });
 
     return CommonUtilities.sendResponsData({
       code: 200,
-      message: MESSAGES.LOGIN_SUCCESS,
-      data: existingSupplier
+      message: MESSAGES.ACCOUNT_VERIFY_LINK,
     });
-  } catch (error) {
+  }
+  catch (error) {
     next(error)
   }
 };
 
+//  verify account link  //
+export const verifyAccountLink = async (query: any, res: Response, next: NextFunction) => {
+  try {
+    const supplierRepository = AppDataSource.getRepository(Supplier);
+    const supplier: any = await supplierRepository.findOneBy({ email: query.email.toLowerCase(), isDeleted: false });
+
+    if (!supplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_LINK,
+        })
+      );
+    }
+
+    console.log('supplier.otp ====== ', supplier.otp);
+    console.log('query.otp ====== ', query.otp);
+    if (supplier.otp != query.otp) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_LINK,
+        })
+      );
+    }
+
+    supplier.otp = 0;
+    supplier.accountVerified = true;
+    await supplierRepository.save(supplier); // Saving the updated supplier
+
+    delete supplier.password;
+    return CommonUtilities.sendResponsData({
+      code: 200,
+      message: MESSAGES.LINK_VERIFIED,
+      data: supplier
+    });
+  }
+  catch (error) {
+    next(error);
+  }
+}
+
 //  login api  //
 export const login = async (bodyData: any, res: Response, next: NextFunction) => {
-  try {    
+  try {
     if (!bodyData.supplier_code || !bodyData.password) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -125,50 +168,11 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
       message: MESSAGES.LOGIN_SUCCESS,
       data: supplier
     });
-
-  } catch (error) {
+  }
+  catch (error) {
     next(error);
   }
 };
-
-
-
-//  verify account link  //
-export const verifyAccountLink = async (query: any, res: Response, next: NextFunction) => {
-  try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const supplier: any = await supplierRepository.findOneBy({ email: query.email.toLowerCase(), isDeleted: false });
-
-    if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.INVALID_LINK,
-      }));
-    }
-
-    console.log('supplier.otp ====== ', supplier.otp);
-    console.log('query.otp ====== ', query.otp);
-    if (supplier.otp != query.otp) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.INVALID_LINK,
-      }));
-    }
-
-    supplier.otp = 0;
-    supplier.accountVerified = true;
-    await supplierRepository.save(supplier); // Saving the updated supplier
-
-    delete supplier.password;
-    return CommonUtilities.sendResponsData({
-      code: 200,
-      message: MESSAGES.LINK_VERIFIED,
-      data: supplier
-    });
-  } catch (error) {
-    next(error);
-  }
-}
 
 //  Forgot Password  //
 export const forgotPassword = async (bodyData: any, res: Response, next: NextFunction) => {
@@ -177,17 +181,21 @@ export const forgotPassword = async (bodyData: any, res: Response, next: NextFun
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     if (!supplier.accountVerified) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
+        })
+      );
     }
 
     let randomOTP = CommonUtilities.genNumericCode(6);
@@ -209,7 +217,7 @@ export const forgotPassword = async (bodyData: any, res: Response, next: NextFun
 
     return CommonUtilities.sendResponsData({
       code: 200,
-      message: "Mail is sent with link",
+      message: MESSAGES.FORGOT_PASSWORD_LINK,
     });
   } catch (error) {
     next(error);
@@ -223,28 +231,34 @@ export const verifyResetLink = async (params: any, query: any, res: Response, ne
     const supplier: any = await supplierRepository.findOneBy({ id: params.id, isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.INVALID_LINK,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_LINK,
+        })
+      );
     }
 
     console.log('supplier.otp ====== ', supplier.otp);
     console.log('query.otp ====== ', query.otp);
     if (supplier.otp != query.otp) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.INVALID_LINK,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_LINK,
+        })
+      );
     }
 
     const expiryTime = moment(supplier.otpExipredAt); // Convert retrieved value
     const currentTime = moment();
     if (currentTime.isAfter(expiryTime)) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.LINK_EXPIRED,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.LINK_EXPIRED,
+        })
+      );
     }
 
     supplier.otp = 0;
@@ -258,7 +272,8 @@ export const verifyResetLink = async (params: any, query: any, res: Response, ne
       message: MESSAGES.LINK_VERIFIED,
       data: supplier
     });
-  } catch (error) {
+  }
+  catch (error) {
     next(error);
   }
 }
@@ -270,10 +285,12 @@ export const resetPassword = async (bodyData: any, res: Response, next: any) => 
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     const pass = await CommonUtilities.cryptPassword(bodyData.password);
@@ -282,21 +299,19 @@ export const resetPassword = async (bodyData: any, res: Response, next: any) => 
       process.cwd() + "/src/views/changePassword.email.ejs",
       { async: true }
     );
-
     let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [supplier.email], subject: "Change Password", text: messageHtml });
 
     supplier.password = pass;
     await supplierRepository.save(supplier); // Saving the updated supplier
 
     delete supplier.password;
-
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.PASSWORD_UPDATED,
       data: supplier
     });
-
-  } catch (error) {
+  }
+  catch (error) {
     next(error)
   }
 };
@@ -307,11 +322,14 @@ export const getProfileDetails = async (token: any, res: Response, next: any) =>
     const decoded: any = await CommonUtilities.getDecoded(token);
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
+
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     delete supplier.password;
@@ -321,8 +339,8 @@ export const getProfileDetails = async (token: any, res: Response, next: any) =>
       message: MESSAGES.PROFILE_DETAILS,
       data: supplier
     });
-
-  } catch (error) {
+  }
+  catch (error) {
     next(error)
   }
 };
@@ -333,39 +351,30 @@ export const updateProfile = async (token: any, bodyData: any, res: Response, ne
     const decoded: any = await CommonUtilities.getDecoded(token);
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
+
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     supplier.email = bodyData.email.toLowerCase();
-    supplier.shopAddress = bodyData.shopAddress;
-    supplier.companyName = bodyData.companyName;
-    supplier.vat = bodyData.vat;
-    supplier.street = bodyData.street;
-    supplier.houseNumber = bodyData.houseNumber;
-    supplier.zipCode = bodyData.zipCode;
-    supplier.country = bodyData.country;
-    supplier.city = bodyData.city;
-    supplier.provinceCode = bodyData.provinceCode;
-    supplier.phone = bodyData.phone;
-    supplier.accountTargetMargin = bodyData.accountTargetMargin;
-    supplier.pec = bodyData.pec;
-    supplier.sdi = bodyData.sdi;
+    supplier.username = bodyData.username;
+    supplier.rag_soc = bodyData.rag_soc;
 
     await supplierRepository.save(supplier);
 
     delete supplier.password;
-
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.PROFILE_UPDATED,
       data: supplier
     });
-
-  } catch (error) {
+  }
+  catch (error) {
     next(error)
   }
 };

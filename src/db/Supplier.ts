@@ -17,7 +17,7 @@ export class Supplier {
   @Column({ default: "" })
   supplier_code: string;
 
-  @Column({ unique: true })
+  @Column({ default: "" })
   rag_soc: string;
 
   @Column({ default: false })
@@ -34,6 +34,9 @@ export class Supplier {
 
   @Column({ type: "timestamp", nullable: true })
   otpExipredAt: Date;
+
+  @Column({ default: false })
+  accountVerified: boolean;
 
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;

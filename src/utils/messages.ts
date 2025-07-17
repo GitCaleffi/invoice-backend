@@ -28,6 +28,7 @@ export const MESSAGES = {
   INVALID_ID: "The provided ID is invalid or missing.",
   ACCOUNT_VERIFY_LINK: "Account verification mail is sent with link.",
   ACCOUNT_NOT_VERIFIED: "Your account isn't verified. Check your email to verify before logging in.",
+  FORGOT_PASSWORD_LINK: "Forgot password mail is sent with link.",
   NEW_DEVICE_ADDED: "New device added successfully.",
   CSV_UPLOADED: "CSV uploaded successfully.",
   NOTIFICATION_NOT_EXISTS: "Notification not found.",

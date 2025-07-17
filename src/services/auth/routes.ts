@@ -32,20 +32,6 @@ export default [
     ],
   },
 
-  //  login  //
-  {
-    path: currentPathURL + "/login",
-    method: "post",
-    handler: [
-      async (req: Request, res: Response, next: NextFunction) => {
-        const result = await login(req.body, res, next);
-        res.status(200).send(result);
-      },
-    ],
-  },
-
-
-
   //  verify account link  //
   {
     path: currentPathURL + '/verifyAccount',
@@ -53,6 +39,18 @@ export default [
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
         const result = await verifyAccountLink(req.query, res, next);
+        res.status(200).send(result);
+      },
+    ],
+  },
+
+  //  login  //
+  {
+    path: currentPathURL + "/login",
+    method: "post",
+    handler: [
+      async (req: Request, res: Response, next: NextFunction) => {
+        const result = await login(req.body, res, next);
         res.status(200).send(result);
       },
     ],
@@ -94,6 +92,7 @@ export default [
     ],
   },
 
+  //  get profile details  //
   {
     path: currentPathURL + '/profileDetails',
     method: "get",
@@ -105,6 +104,7 @@ export default [
     ],
   },
 
+  //  update profile  //
   {
     path: currentPathURL + '/updateProfile',
     method: "post",
