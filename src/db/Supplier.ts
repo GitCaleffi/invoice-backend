@@ -5,25 +5,25 @@ export class Supplier {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   username: string;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   email: string;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   password: string;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   supplier_code: string;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   rag_soc: string;
 
   @Column({ default: false })
   isDeleted: boolean;
 
-  @Column({ default: "" })
+  @Column({ default: null })
   accessToken: string;
 
   @Column({ default: 0 })
