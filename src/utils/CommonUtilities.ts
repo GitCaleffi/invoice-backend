@@ -29,12 +29,12 @@ export class CommonUtilities {
 
   /****  Generate encrypted password  *******/
   public static cryptPassword = async (password: string) => {
-    const salt=process.env.SALT || 10;
+  const saltRounds = parseInt(process.env.SALT || "10", 10);
 
     return new Promise(function (resolve, reject) {
       return bcrypt.hash(
         password,
-        salt,
+        saltRounds,
         (err: any, hash: any) => {
           if (err) {
             return reject(err);
