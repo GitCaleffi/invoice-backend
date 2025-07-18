@@ -30,6 +30,15 @@ export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunc
       );
     }
 
+    if (existingSupplier.email && !existingSupplier.accountVerified) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
+        })
+      );
+    }
+
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.SUCCESS,
