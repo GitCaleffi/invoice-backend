@@ -17,7 +17,7 @@ import 'dotenv/config';
 
 
 //  check email linked with account  //
-export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunction) => {
+export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const existingSupplier = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
@@ -34,7 +34,7 @@ export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunc
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
-          message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
+          message: MESSAGES.ACCOUNT_NOT_VERIFIED,
         })
       );
     }
@@ -50,7 +50,7 @@ export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunc
 };
 
 //  add email and password  //
-export const addEmail = async (bodyData: any, res: Response, next: NextFunction) => {
+export const addEmail = async (bodyData: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const existingSupplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
@@ -76,7 +76,7 @@ export const addEmail = async (bodyData: any, res: Response, next: NextFunction)
       { link: process.env.accountVerifyBaseUrl + '?email=' + bodyData.email.toLowerCase() + '&otp=' + randomOTP + '&type=accountVerified' },
       { async: true }
     );
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email], subject: "Account Verify Link", text: messageHtml });
+    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
 
     return CommonUtilities.sendResponsData({
       code: 200,
@@ -89,7 +89,7 @@ export const addEmail = async (bodyData: any, res: Response, next: NextFunction)
 };
 
 //  verify account link  //
-export const verifyAccountLink = async (query: any, res: Response, next: NextFunction) => {
+export const verifyAccountLink = async (query: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: query.email.toLowerCase(), isDeleted: false });
@@ -131,7 +131,7 @@ export const verifyAccountLink = async (query: any, res: Response, next: NextFun
 }
 
 //  login api  //
-export const login = async (bodyData: any, res: Response, next: NextFunction) => {
+export const login = async (bodyData: any, next: NextFunction) => {
   try {
     if (!bodyData.supplier_code || !bodyData.password) {
       throw new HTTP400Error(
@@ -158,7 +158,7 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
-          message: MESSAGES.VERIFY_ACCOUNT_BEFORE,
+          message: MESSAGES.ACCOUNT_NOT_VERIFIED,
         })
       );
     }
@@ -194,7 +194,7 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
 };
 
 //  Forgot Password  //
-export const forgotPassword = async (bodyData: any, res: Response, next: NextFunction) => {
+export const forgotPassword = async (bodyData: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
@@ -227,7 +227,7 @@ export const forgotPassword = async (bodyData: any, res: Response, next: NextFun
       { async: true }
     );
 
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email], subject: "Forgot Password link", text: messageHtml });
+    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Forgot Password link", text: messageHtml });
 
     supplier['otp'] = randomOTP;
     supplier['otpVerified'] = false;
@@ -238,13 +238,14 @@ export const forgotPassword = async (bodyData: any, res: Response, next: NextFun
       code: 200,
       message: MESSAGES.FORGOT_PASSWORD_LINK,
     });
-  } catch (error) {
+  }
+  catch (error) {
     next(error);
   }
 };
 
 //  Verify Reset Link  //
-export const verifyResetLink = async (params: any, query: any, res: Response, next: NextFunction) => {
+export const verifyResetLink = async (params: any, query: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: params.id, isDeleted: false });
@@ -298,7 +299,7 @@ export const verifyResetLink = async (params: any, query: any, res: Response, ne
 }
 
 //  Reset Password  //
-export const resetPassword = async (bodyData: any, res: Response, next: any) => {
+export const resetPassword = async (bodyData: any, next: any) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
@@ -318,7 +319,7 @@ export const resetPassword = async (bodyData: any, res: Response, next: any) => 
       process.cwd() + "/src/views/changePassword.email.ejs",
       { async: true }
     );
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [supplier.email], subject: "Change Password", text: messageHtml });
+    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [supplier.email.toLowerCase()], subject: "Change Password", text: messageHtml });
 
     supplier.password = pass;
     await supplierRepository.save(supplier); // Saving the updated supplier
@@ -336,7 +337,7 @@ export const resetPassword = async (bodyData: any, res: Response, next: any) => 
 };
 
 //  Get Profile Details  //
-export const getProfileDetails = async (token: any, res: Response, next: any) => {
+export const getProfileDetails = async (token: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
     const supplierRepository = AppDataSource.getRepository(Supplier);
@@ -352,7 +353,6 @@ export const getProfileDetails = async (token: any, res: Response, next: any) =>
     }
 
     delete supplier.password;
-
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.PROFILE_DETAILS,
@@ -365,7 +365,7 @@ export const getProfileDetails = async (token: any, res: Response, next: any) =>
 };
 
 //  Update Profile  //
-export const updateProfile = async (token: any, bodyData: any, res: Response, next: any) => {
+export const updateProfile = async (token: any, bodyData: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
     const supplierRepository = AppDataSource.getRepository(Supplier);
@@ -392,6 +392,48 @@ export const updateProfile = async (token: any, bodyData: any, res: Response, ne
       message: MESSAGES.PROFILE_UPDATED,
       data: supplier
     });
+  }
+  catch (error) {
+    next(error)
+  }
+};
+
+//  Change Password  //
+export const changePassword = async (token: any, bodyData: any, next: any) => {
+  try {
+    const decoded: any = await CommonUtilities.getDecoded(token);
+    const supplierRepository = AppDataSource.getRepository(Supplier);
+    const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, supplier_code: decoded.supplier_code, isDeleted: false });
+
+    if (!supplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
+    }
+
+    const match = await CommonUtilities.VerifyPassword(bodyData.oldPassword, supplier.password);
+
+    if (match) {
+      let hashedPassword = await CommonUtilities.cryptPassword(bodyData.newPassword);
+      supplier.password = hashedPassword;
+      await supplierRepository.save(supplier);
+
+      return CommonUtilities.sendResponsData({
+        code: 200,
+        message: MESSAGES.PASSWORD_UPDATED
+      });
+    }
+    else {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.INVALID_PASSWORD
+        })
+      );
+    }
   }
   catch (error) {
     next(error)

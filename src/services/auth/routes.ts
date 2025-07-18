@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import 'dotenv/config';
-import { isEmailLinked, addEmail, forgotPassword, getProfileDetails, login, resetPassword, updateProfile, verifyAccountLink, verifyResetLink } from "./controller";
+import { isEmailLinked, addEmail, forgotPassword, getProfileDetails, login, resetPassword, updateProfile, verifyAccountLink, verifyResetLink, changePassword } from "./controller";
 
 const basePath = process.env.BASE_PATH || "/api/v1/";
 const currentPath = "auth";
@@ -14,7 +14,7 @@ export default [
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await isEmailLinked(req.body, res, next);
+        const result = await isEmailLinked(req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -26,7 +26,7 @@ export default [
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await addEmail(req.body, res, next);
+        const result = await addEmail(req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -38,7 +38,7 @@ export default [
     method: "get",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await verifyAccountLink(req.query, res, next);
+        const result = await verifyAccountLink(req.query, next);
         res.status(200).send(result);
       },
     ],
@@ -50,7 +50,7 @@ export default [
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await login(req.body, res, next);
+        const result = await login(req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -62,7 +62,7 @@ export default [
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await forgotPassword(req.body, res, next);
+        const result = await forgotPassword(req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -74,7 +74,7 @@ export default [
     method: "get",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await verifyResetLink(req.params, req.query, res, next);
+        const result = await verifyResetLink(req.params, req.query, next);
         res.status(200).send(result);
       },
     ],
@@ -86,7 +86,7 @@ export default [
     method: "put",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await resetPassword(req.body, res, next);
+        const result = await resetPassword(req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -98,7 +98,7 @@ export default [
     method: "get",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await getProfileDetails(req.get("Authorization"), res, next);
+        const result = await getProfileDetails(req.get("Authorization"), next);
         res.status(200).send(result);
       },
     ],
@@ -110,7 +110,19 @@ export default [
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await updateProfile(req.get("Authorization"), req.body, res, next);
+        const result = await updateProfile(req.get("Authorization"), req.body, next);
+        res.status(200).send(result);
+      },
+    ],
+  },
+
+  // change password  //
+  {
+    path: currentPathURL + '/changePassword',
+    method: "put",
+    handler: [
+      async (req: Request, res: Response, next: NextFunction) => {
+        const result = await changePassword(req.get("Authorization"), req.body, next);
         res.status(200).send(result);
       },
     ],
