@@ -30,7 +30,7 @@ export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunc
       );
     }
 
-    if (existingSupplier.email && !existingSupplier.accountVerified) {
+    if (existingSupplier.email && existingSupplier.password && !existingSupplier.accountVerified) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
@@ -42,7 +42,7 @@ export const isEmailLinked = async (bodyData: any, res: Response, next: NextFunc
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.SUCCESS,
-      data: { emailExists: existingSupplier.email ? true : false }
+      data: { emailExists: (existingSupplier.email && existingSupplier.password) ? true : false }
     });
   } catch (error) {
     next(error)
@@ -162,7 +162,7 @@ export const login = async (bodyData: any, res: Response, next: NextFunction) =>
         })
       );
     }
-    
+
     const passwordMatch = await bcrypt.compare(bodyData.password, supplier.password);
     if (!passwordMatch) {
       throw new HTTP400Error(
