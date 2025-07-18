@@ -18,7 +18,7 @@ export class PurchaseOrders {
   @Column({ default: 0 })
   ordered_quantity: number;
 
-  @Column({ default: 0 })
+  @Column({ type: "double precision", default: 0 })
   unit_price: number;
 
   @Column()
