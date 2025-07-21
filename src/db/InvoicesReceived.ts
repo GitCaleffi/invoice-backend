@@ -9,7 +9,7 @@ export class InvoicesReceived  {
   @Column({ default: "" })
   invoice_number: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable:true })
   invoice_date: Date;
 
   @Column({ default: "" })
@@ -30,7 +30,7 @@ export class InvoicesReceived  {
   @Column()
   description: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp" ,  nullable:true})
   expected_delivery_date: Date;
 
   @Column()
@@ -42,7 +42,7 @@ export class InvoicesReceived  {
   @Column()
   processed: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable:true })
   insertion_date: Date;
 
   @Column({ default: false })

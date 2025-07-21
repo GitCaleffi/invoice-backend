@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { Supplier } from "../db/Supplier";
 import { InvoicesReceived } from "../db/InvoicesReceived";
 import { PurchaseOrders } from "../db/PurchaseOrders";
+import { SupplierInvoicesMapping } from "../db/SupplierInvoiceMapping";
 if (!process.env.DB_HOST || !process.env.DB_PORT || !process.env.DB_USER || !process.env.DB_PASS || !process.env.DB_NAME) {
   throw new Error("Missing database environment variables. Check .env file.");
 }
@@ -16,6 +17,6 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: true,  // Set to false in production
   logging: false,
-  entities: [Supplier, InvoicesReceived, PurchaseOrders],
+  entities: [Supplier, InvoicesReceived, PurchaseOrders, SupplierInvoicesMapping],
   // ssl: true,
 });
