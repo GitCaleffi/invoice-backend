@@ -24,10 +24,10 @@ export class PurchaseOrders {
   @Column()
   supplier_code: string;
 
-  @Column()
+  @Column({ nullable:true})
   production_lot: string;
 
-  @Column()
+  @Column({ nullable:true})
   currency: string;
 
   @Column({ default: false })

@@ -2,14 +2,14 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { Supplier } from "./Supplier";
 
 @Entity()
-export class InvoicesReceived  {
+export class InvoicesReceived {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ default: "" })
   invoice_number: string;
 
-  @Column({ type: "timestamp", nullable:true })
+  @Column({ type: "timestamp", nullable: true })
   invoice_date: Date;
 
   @Column({ default: "" })
@@ -21,8 +21,12 @@ export class InvoicesReceived  {
   @Column({ default: 0 })
   quantity: number;
 
-  @Column({ default: 0 })
+  // @Column({ default: 0 })
+  // price: number;
+
+  @Column('numeric', { precision: 10, scale: 2, default: 0 })
   price: number;
+
 
   @Column()
   currency: string;
@@ -30,7 +34,7 @@ export class InvoicesReceived  {
   @Column()
   description: string;
 
-  @Column({ type: "timestamp" ,  nullable:true})
+  @Column({ type: "timestamp", nullable: true })
   expected_delivery_date: Date;
 
   @Column()
@@ -42,7 +46,7 @@ export class InvoicesReceived  {
   @Column()
   processed: string;
 
-  @Column({ type: "timestamp", nullable:true })
+  @Column({ type: "timestamp", nullable: true })
   insertion_date: Date;
 
   @Column({ default: false })
