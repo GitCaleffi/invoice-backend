@@ -102,7 +102,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       );
 
       if (!matchedPO) {
-        invalidRows.push({ row, reason: `Row ${rowIndex}: No matching PO with this order number for supplier.` });
+        invalidRows.push({ row, reason: `Row ${rowIndex}: No matching Purchase order with this order number for supplier.` });
         continue;
       }
 
@@ -164,7 +164,6 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
         insertion_date: item.insertion_date || new Date(),
         supplier: supplier,
       };
-      console.log(invoiceData, "iiiiiiiiiiiiiiiiiiiii")
 
       try {
         if (existingInvoice) {
@@ -198,86 +197,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
   }
 };
 
-// export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response, next: NextFunction) => {
-//   try {
-//     const decoded: any = await CommonUtilities.getDecoded(token);
-//     const supplierRepository = AppDataSource.getRepository(Supplier);
-//     const supplier: any = await supplierRepository.findOneBy({
-//       id: decoded.id,
-//       email: decoded.email.toLowerCase(),
-//     });
 
-//     if (!supplier) {
-//       return res.status(400).json(CommonUtilities.sendResponsData({
-//         code: 400,
-//         message: MESSAGES.USER_NOT_EXISTS,
-//       }));
-//     }
-
-//     if (!Array.isArray(bodyData)) {
-//       return res.status(400).json(CommonUtilities.sendResponsData({
-//         code: 400,
-//         message: "Invalid data format: expected an array",
-//       }));
-//     }
-
-//     const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
-
-//     for (const item of bodyData) {
-//       const invoice_number_str = String(item.invoice_number);
-
-//       let invoiceItem = await invoiceRepository.findOne({
-//         where: {
-//           invoice_number: invoice_number_str,
-//           supplier: { id: decoded.id },
-//           isDeleted: false
-//         },
-//         relations: ["supplier"],
-//       });
-
-//       const invoiceData = {
-//         invoice_number: invoice_number_str,
-//         invoice_date: parseDate(item.invoice_date),
-//         order_number: item.order_number || '',
-//         article_code: item.article_code || '',
-//         quantity: item.quantity || 0,
-//         price: item.price || 0,
-//         currency: item.currency || '',
-//         description: item.description || '',
-//         expected_delivery_date: parseDate(item.expected_delivery_date),
-//         supplier_code: item.supplier_code || '',
-//         production_lot: item.production_lot || '',
-//         processed: item.processed || '',
-//         insertion_date: parseDate(item.insertion_date),
-//         supplier: supplier,
-//       };
-
-//       try {
-//         if (invoiceItem) {
-//           Object.assign(invoiceItem, invoiceData);
-//           await invoiceRepository.save(invoiceItem);
-//         } else {
-//           const newInvoice = invoiceRepository.create(invoiceData);
-//           await invoiceRepository.save(newInvoice);
-//         }
-//       } catch (err) {
-//         console.error(`Error saving invoice ${invoice_number_str}:`, err);
-//       }
-//     }
-
-//     return res.status(200).json(CommonUtilities.sendResponsData({
-//       code: 200,
-//       message: MESSAGES.CSV_UPLOADED,
-//     }));
-
-//   } catch (error) {
-//     console.error("Upload error:", error);
-//     next(error);
-//   }
-// };
-
-
-// add headers
 export const addMappedHeaders = async (
   token: any,
   bodyData: any,
