@@ -94,13 +94,14 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       const rowErrors: any[] = [];
 
       // Validate supplier code
-      if (decoded.supplier_code !== row.supplier_code) {
-        rowErrors.push({
-          reason: "Mancata corrispondenza del codice fornitore",
-          key: "supplier_code",
-          value: row.supplier_code,
-        });
-      }
+
+      // if (decoded.supplier_code !== row.supplier_code) {
+      //   rowErrors.push({
+      //     reason: "Mancata corrispondenza del codice fornitore",
+      //     key: "supplier_code",
+      //     value: row.supplier_code,
+      //   });
+      // }
 
       const matchedPO = existingPOs.find(po =>
         po.order_number === String(row.order_number)
@@ -151,6 +152,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
 
       validRows.push({
         ...row,
+        supplier_code: supplier.supplier_code,
         processed: "true",
         insertion_date: new Date(),
       });
@@ -178,7 +180,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
         currency: item.currency || '',
         description: item.description || '',
         expected_delivery_date: parseDate(item.expected_delivery_date),
-        supplier_code: item.supplier_code || '',
+        supplier_code: supplier.supplier_code,
         production_lot: item.production_lot || '',
         processed: item.processed || '',
         insertion_date: item.insertion_date || new Date(),
