@@ -20,7 +20,11 @@ import 'dotenv/config';
 export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
   try {
     const supplierRepository = AppDataSource.getRepository(Supplier);
-    const existingSupplier = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
+    const existingSupplier = await supplierRepository.findOne({
+      where: { supplier_code: bodyData.supplier_code, isDeleted: false }
+    });
+    console.log("existingSupplier ============ ", existingSupplier);
+
     if (!existingSupplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
