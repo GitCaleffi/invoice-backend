@@ -16,6 +16,7 @@ const parseDate = (value: string | null | undefined): Date | undefined => {
 };
 
 //  get Invoice Mapping list  //
+
 export const getInvoices = async (token: any, res: Response, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
@@ -54,7 +55,6 @@ export const getInvoices = async (token: any, res: Response, next: NextFunction)
   }
 };
 
-
 export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
@@ -91,10 +91,15 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
     for (let index = 0; index < bodyData.length; index++) {
       const row = bodyData[index];
       const rowIndex = index + 1;
+      const rowErrors: any[] = [];
 
-      if (decoded.supplier_code != row.supplier_code) {
-        invalidRows.push({ row, reason: `Invalid supplier code!` });
-        continue;
+      // Validate supplier code
+      if (decoded.supplier_code !== row.supplier_code) {
+        rowErrors.push({
+          reason: "Mancata corrispondenza del codice fornitore",
+          key: "supplier_code",
+          value: row.supplier_code,
+        });
       }
 
       const matchedPO = existingPOs.find(po =>
@@ -102,30 +107,45 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       );
 
       if (!matchedPO) {
-        invalidRows.push({ row, reason: `No matching Purchase order with this order number for supplier.` });
-        continue;
+        rowErrors.push({
+          reason: "Nessun ordine di acquisto corrispondente",
+          key: "order_number",
+          value: row.order_number,
+        });
+      } else {
+
+        if (matchedPO.article_code !== String(row.article_code)) {
+          rowErrors.push({
+            reason: "Mancata corrispondenza del codice articolo",
+            key: "article_code",
+            value: row.article_code,
+          });
+        }
+
+        if (Number(matchedPO.ordered_quantity) !== Number(row.quantity)) {
+          rowErrors.push({
+            reason: "Mancata corrispondenza della quantità",
+            key: "quantity",
+            value: row.quantity,
+          });
+        }
+
+        if (Number(matchedPO.unit_price) !== Number(row.price)) {
+          rowErrors.push({
+            reason: "Mancata corrispondenza del prezzo unitario",
+            key: "price",
+            value: row.price,
+          });
+        }
+
+
       }
 
-      const errors = [];
-
-      if (matchedPO.article_code !== String(row.article_code)) {
-        errors.push("Article code mismatch");
-      }
-
-      if (matchedPO.supplier_code !== String(row.supplier_code)) {
-        errors.push("Supplier code mismatch");
-      }
-
-      if (Number(matchedPO.ordered_quantity) !== Number(row.quantity)) {
-        errors.push("Quantity mismatch");
-      }
-
-      if (Number(matchedPO.unit_price) !== Number(row.price)) {
-        errors.push("Unit price mismatch");
-      }
-
-      if (errors.length > 0) {
-        invalidRows.push({ row, reason: `${errors.join(", ")}` });
+      if (rowErrors.length > 0) {
+        invalidRows.push({
+          row: rowIndex,
+          errors: rowErrors
+        });
         continue;
       }
 
@@ -180,7 +200,6 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
 
     return res.status(200).json(CommonUtilities.sendResponsData({
       code: 200,
-      // message: MESSAGES.CSV_UPLOADED,
       message: validRows.length > 0
         ? `${validRows.length} row(s) uploaded successfully.`
         : "No valid rows uploaded.",
@@ -190,13 +209,11 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
         invalidRows,
       }
     }));
-
   } catch (error) {
     console.error("Upload error:", error);
     next(error);
   }
 };
-
 
 export const addMappedHeaders = async (
   token: any,
