@@ -93,7 +93,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       const rowIndex = index + 1;
 
       if (decoded.supplier_code != row.supplier_code) {
-        invalidRows.push({ row, reason: `Row ${rowIndex}: Invalid supplier code!` });
+        invalidRows.push({ row, reason: `Invalid supplier code!` });
         continue;
       }
 
@@ -102,7 +102,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       );
 
       if (!matchedPO) {
-        invalidRows.push({ row, reason: `Row ${rowIndex}: No matching Purchase order with this order number for supplier.` });
+        invalidRows.push({ row, reason: `No matching Purchase order with this order number for supplier.` });
         continue;
       }
 
@@ -125,7 +125,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       }
 
       if (errors.length > 0) {
-        invalidRows.push({ row, reason: `Row ${rowIndex}: ${errors.join(", ")}` });
+        invalidRows.push({ row, reason: `${errors.join(", ")}` });
         continue;
       }
 
