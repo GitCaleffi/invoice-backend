@@ -34,7 +34,7 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    if (existingSupplier.email && existingSupplier.password && !existingSupplier.accountVerified) {
+    if (existingSupplier.email?.trim() && existingSupplier.password && !existingSupplier.accountVerified) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
@@ -46,7 +46,7 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.SUCCESS,
-      data: { emailExists: (existingSupplier.email && existingSupplier.password) ? true : false }
+      data: { emailExists: (existingSupplier.email?.trim() && existingSupplier.password) ? true : false }
     });
   } catch (error) {
     next(error)
