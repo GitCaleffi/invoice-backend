@@ -15,15 +15,28 @@ import { MESSAGES } from "../../utils/messages";
 import { MailerUtilities } from "../../utils/MailerUtilities";
 import 'dotenv/config';
 
+const supplierRepository = AppDataSource.getRepository(Supplier);
+
 
 //  check email linked with account  //
 export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const existingSupplier = await supplierRepository.findOne({
-      where: { supplier_code: bodyData.supplier_code, isDeleted: false }
-    });
-    console.log("existingSupplier ============ ", existingSupplier);
+    if (!bodyData.email?.trim()) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.EMAIL_REQUIRED,
+        })
+      );
+    };
+    
+    //  trim the email leading/trailing whitespace on the DB side and return matched data
+    const existingSupplier = await supplierRepository
+      .createQueryBuilder("supplier")
+      .where("TRIM(supplier.email) = :email AND supplier.isDeleted = false", {
+        email: bodyData.email.trim(),
+      })
+      .getOne();
 
     if (!existingSupplier) {
       throw new HTTP400Error(
@@ -53,11 +66,16 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
   }
 };
 
-//  add email and password  //
-export const addEmail = async (bodyData: any, next: NextFunction) => {
+//  link password with email  //
+export const addPassword = async (bodyData: any, next: NextFunction) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const existingSupplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
+    const existingSupplier:any = await supplierRepository
+      .createQueryBuilder("supplier")
+      .where("TRIM(supplier.email) = :email AND supplier.isDeleted = false", {
+        email: bodyData.email.trim(),
+      })
+      .getOne();
+
     if (!existingSupplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -67,7 +85,7 @@ export const addEmail = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    existingSupplier.email = bodyData.email.toLowerCase();
+    existingSupplier.email = existingSupplier.email.trim().toLowerCase();
     existingSupplier.password = await CommonUtilities.cryptPassword(bodyData.password);
 
     let randomOTP = CommonUtilities.genNumericCode(6);
@@ -95,7 +113,7 @@ export const addEmail = async (bodyData: any, next: NextFunction) => {
 //  verify account link  //
 export const verifyAccountLink = async (query: any, next: NextFunction) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: query.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
@@ -146,7 +164,7 @@ export const login = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
 
     if (!supplier) {
@@ -200,7 +218,7 @@ export const login = async (bodyData: any, next: NextFunction) => {
 //  Forgot Password  //
 export const forgotPassword = async (bodyData: any, next: NextFunction) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
@@ -251,7 +269,7 @@ export const forgotPassword = async (bodyData: any, next: NextFunction) => {
 //  Verify Reset Link  //
 export const verifyResetLink = async (params: any, query: any, next: NextFunction) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: params.id, isDeleted: false });
 
     if (!supplier) {
@@ -305,7 +323,7 @@ export const verifyResetLink = async (params: any, query: any, next: NextFunctio
 //  Reset Password  //
 export const resetPassword = async (bodyData: any, next: any) => {
   try {
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
@@ -344,7 +362,7 @@ export const resetPassword = async (bodyData: any, next: any) => {
 export const getProfileDetails = async (token: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
@@ -372,7 +390,7 @@ export const getProfileDetails = async (token: any, next: any) => {
 export const updateProfile = async (token: any, bodyData: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
@@ -406,7 +424,7 @@ export const updateProfile = async (token: any, bodyData: any, next: any) => {
 export const changePassword = async (token: any, bodyData: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplierRepository = AppDataSource.getRepository(Supplier);
+    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, supplier_code: decoded.supplier_code, isDeleted: false });
 
     if (!supplier) {

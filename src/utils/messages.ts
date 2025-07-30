@@ -37,4 +37,6 @@ export const MESSAGES = {
   INVENTORY_DELETED: "Inventario svuotato con successo",
   INVENTORY_DETAILS: "Dettagli inventario recuperati correttamente",
   INVENTORY_UPDATED: "Inventario aggiornato correttamente",
+  EMAIL_REQUIRED: "E-mail richiesta",
+  EMAIL_SEND_ERROR: "Impossibile inviare l'e-mail in questo momento. Riprova più tardi.",
 }
