@@ -33,8 +33,8 @@ export class InvoicesReceived {
   @Column({ type: "timestamp", nullable: true })
   expected_delivery_date: Date;
 
-  // @Column()
-  // supplier_code: string;
+  @Column()
+  supplier_code: string;
 
   @Column({ nullable: true })
   production_lot: string;
