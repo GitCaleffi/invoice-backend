@@ -4,7 +4,7 @@ import { Supplier } from "../../db/Supplier";
 import { AppDataSource } from "../../utils/ormconfig";
 import { MESSAGES } from "../../utils/messages";
 import { InvoicesReceived } from '../../db/InvoicesReceived';
-import { Brackets } from 'typeorm';
+import { Brackets, In } from 'typeorm';
 import { SupplierInvoicesMapping } from '../../db/SupplierInvoiceMapping';
 import { PurchaseOrders } from '../../db/PurchaseOrders';
 
@@ -82,7 +82,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
     }
 
     const existingPOs = await poRepo.find({
-      where: { supplier_code: supplier.supplier_code },
+      where: { supplier_code: In(supplier.supplier_code) },
     });
 
     const validRows: any[] = [];

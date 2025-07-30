@@ -5,25 +5,25 @@ export class Supplier {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   username: string;
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   email: string;
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   password: string;
 
-  @Column({ default: null })
-  supplier_code: string;
+  @Column({ type: "simple-json", nullable: true })
+  supplier_code: string[];
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   rag_soc: string;
 
   @Column({ default: false })
   isDeleted: boolean;
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   accessToken: string;
 
   @Column({ default: 0 })
