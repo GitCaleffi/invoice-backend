@@ -29,7 +29,7 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
         })
       );
     };
-    
+
     //  trim the email leading/trailing whitespace on the DB side and return matched data
     const existingSupplier = await supplierRepository
       .createQueryBuilder("supplier")
@@ -69,7 +69,7 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
 //  link password with email  //
 export const addPassword = async (bodyData: any, next: NextFunction) => {
   try {
-    const existingSupplier:any = await supplierRepository
+    const existingSupplier: any = await supplierRepository
       .createQueryBuilder("supplier")
       .where("TRIM(supplier.email) = :email AND supplier.isDeleted = false", {
         email: bodyData.email.trim(),
@@ -87,10 +87,8 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
 
     existingSupplier.email = existingSupplier.email.trim().toLowerCase();
     existingSupplier.password = await CommonUtilities.cryptPassword(bodyData.password);
-
     let randomOTP = CommonUtilities.genNumericCode(6);
     existingSupplier.otp = randomOTP;
-    await supplierRepository.save(existingSupplier);
 
     // send account verification email 
     let messageHtml = await ejs.renderFile(
@@ -100,6 +98,7 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
     );
     let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
 
+    await supplierRepository.save(existingSupplier);
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.ACCOUNT_VERIFY_LINK,
