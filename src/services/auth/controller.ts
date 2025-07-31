@@ -17,7 +17,6 @@ import 'dotenv/config';
 
 const supplierRepository = AppDataSource.getRepository(Supplier);
 
-
 //  check email linked with account  //
 export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
   try {
@@ -34,7 +33,7 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
     const existingSupplier = await supplierRepository
       .createQueryBuilder("supplier")
       .where("TRIM(supplier.email) = :email AND supplier.isDeleted = false", {
-        email: bodyData.email.trim(),
+        email: bodyData.email.trim().toLowerCase(),
       })
       .getOne();
 
@@ -72,7 +71,7 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
     const existingSupplier: any = await supplierRepository
       .createQueryBuilder("supplier")
       .where("TRIM(supplier.email) = :email AND supplier.isDeleted = false", {
-        email: bodyData.email.trim(),
+        email: bodyData.email.trim().toLowerCase(),
       })
       .getOne();
 
@@ -89,6 +88,7 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
     existingSupplier.password = await CommonUtilities.cryptPassword(bodyData.password);
     let randomOTP = CommonUtilities.genNumericCode(6);
     existingSupplier.otp = randomOTP;
+    await supplierRepository.save(existingSupplier);
 
     // send account verification email 
     let messageHtml = await ejs.renderFile(
@@ -98,7 +98,7 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
     );
     let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
 
-    await supplierRepository.save(existingSupplier);
+    // await supplierRepository.save(existingSupplier);
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.ACCOUNT_VERIFY_LINK,
@@ -152,7 +152,7 @@ export const verifyAccountLink = async (query: any, next: NextFunction) => {
 //  login api  //
 export const login = async (bodyData: any, next: NextFunction) => {
   try {
-    if (!bodyData.supplier_code || !bodyData.password) {
+    if (!bodyData.email?.trim() || !bodyData.password) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
@@ -161,7 +161,7 @@ export const login = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    const supplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
+    const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email?.trim().toLowerCase(), isDeleted: false });
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({

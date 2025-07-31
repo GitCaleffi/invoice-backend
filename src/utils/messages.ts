@@ -1,7 +1,7 @@
 export const MESSAGES = {
   USER_NOT_EXISTS: "Questo utente non esiste. Controlla i tuoi dati",
   SUCCESS: "Azione completata con successo",
-  LOGIN_CREDENTIAL_REQUIRED: "Sono richiesti il codice fornitore e la password",
+  LOGIN_CREDENTIAL_REQUIRED: "Sono richiesti e-mail e password",
   REGISTER_SUCCESS: "Grazie per esserti registrato con noi",
   LOGIN_SUCCESS: "Hai effettuato l'accesso con successo",
   LOGOUT_SUCCESS: "Hai effettuato correttamente il logout",

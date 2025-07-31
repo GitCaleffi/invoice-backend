@@ -7,6 +7,7 @@ import { InvoicesReceived } from '../../db/InvoicesReceived';
 import { Brackets, In } from 'typeorm';
 import { SupplierInvoicesMapping } from '../../db/SupplierInvoiceMapping';
 import { PurchaseOrders } from '../../db/PurchaseOrders';
+import { HTTP400Error } from '../../utils/httpErrors';
 
 const parseDate = (value: string | null | undefined): Date | undefined => {
   if (!value) return undefined;
@@ -15,31 +16,32 @@ const parseDate = (value: string | null | undefined): Date | undefined => {
   return new Date(`${year}-${month}-${day}`);
 };
 
+const supplierRepository = AppDataSource.getRepository(Supplier);
+const headerMappingRepo = AppDataSource.getRepository(SupplierInvoicesMapping);
+const poRepo = AppDataSource.getRepository(PurchaseOrders);
+const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
+
+
 //  get Invoice Mapping list  //
-export const getInvoices = async (token: any, queryData: any, res: Response, next: NextFunction) => {
+export const getInvoices = async (token: any, queryData: any, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const supplier = await supplierRepository.findOneBy({
-      id: decoded.id,
-      email: decoded.email.toLowerCase(),
-    });
+    const supplier = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
-
-    const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
 
     const limit = queryData?.limit || 10;
     const page = queryData?.page || 1;
     const search = (queryData?.search || "").trim().toLowerCase();
 
-    const invoices = await invoiceRepository.find({
+    const invoices = await invoiceRepo.find({
       where: {
         supplier: { id: supplier.id },
         isDeleted: false
@@ -48,45 +50,51 @@ export const getInvoices = async (token: any, queryData: any, res: Response, nex
       order: { insertion_date: "DESC" }
     });
 
-    return res.status(200).json(CommonUtilities.sendResponsData({
+    return CommonUtilities.sendResponsData({
       code: 200,
       message: "Invoices fetched successfully",
       data: invoices,
-    }));
-  } catch (error) {
+    });
+  }
+  catch (error) {
     next(error);
   }
 };
 
-export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response, next: NextFunction) => {
+export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplierRepo = AppDataSource.getRepository(Supplier);
-    const poRepo = AppDataSource.getRepository(PurchaseOrders);
-    const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
-
-    const supplier = await supplierRepo.findOneBy({
-      id: decoded.id,
-      email: decoded.email.toLowerCase(),
-    });
+    const supplier = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     if (!Array.isArray(bodyData)) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: "Invalid data format: expected an array",
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: "Invalid data format: expected an array",
+        })
+      );
     }
 
     const existingPOs = await poRepo.find({
       where: { supplier_code: In(supplier.supplier_code) },
     });
+    if (!existingPOs || existingPOs.length === 0) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: "Nessun ordine di acquisto trovato",
+        })
+      );
+    }
 
     const validRows: any[] = [];
     const invalidRows: any[] = [];
@@ -95,16 +103,6 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       const row = bodyData[index];
       const rowIndex = index + 1;
       const rowErrors: any[] = [];
-
-      // Validate supplier code
-
-      // if (decoded.supplier_code !== row.supplier_code) {
-      //   rowErrors.push({
-      //     reason: "Mancata corrispondenza del codice fornitore",
-      //     key: "supplier_code",
-      //     value: row.supplier_code,
-      //   });
-      // }
 
       const matchedPO = existingPOs.find(po =>
         po.order_number === String(row.order_number)
@@ -116,8 +114,8 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
           key: "order_number",
           value: row.order_number,
         });
-      } else {
-
+      }
+      else {
         if (matchedPO.article_code !== String(row.article_code)) {
           rowErrors.push({
             reason: "Mancata corrispondenza del codice articolo",
@@ -126,14 +124,6 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
           });
         }
 
-        // if (Number(matchedPO.ordered_quantity) !== Number(row.quantity)) {
-        //   rowErrors.push({
-        //     reason: "Mancata corrispondenza della quantità",
-        //     key: "quantity",
-        //     value: row.quantity,
-        //   });
-        // }
-        
         const orderedQty = Number(matchedPO.ordered_quantity);
         const uploadedQty = Number(row.quantity);
         const maxAllowedQty = orderedQty * 1.1;
@@ -165,7 +155,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
 
       validRows.push({
         ...row,
-        supplier_code: supplier.supplier_code,
+        supplier_code: matchedPO?.supplier_code,
         processed: "true",
         insertion_date: new Date(),
       });
@@ -177,6 +167,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       let existingInvoice = await invoiceRepo.findOne({
         where: {
           invoice_number: invoice_number_str,
+          order_number: item.order_number,
           supplier: { id: supplier.id },
           isDeleted: false,
         },
@@ -193,7 +184,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
         currency: item.currency || '',
         description: item.description || '',
         expected_delivery_date: parseDate(item.expected_delivery_date),
-        // supplier_code: supplier.supplier_code,
+        supplier_code: item.supplier_code,
         production_lot: item.production_lot || '',
         processed: item.processed || '',
         insertion_date: item.insertion_date || new Date(),
@@ -213,44 +204,33 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
       }
     }
 
-    return res.status(200).json(CommonUtilities.sendResponsData({
+    return CommonUtilities.sendResponsData({
       code: 200,
-      message: validRows.length > 0
-        ? `${validRows.length} row(s) uploaded successfully.`
-        : "No valid rows uploaded.",
+      message: validRows.length > 0 ? `${validRows.length} row(s) uploaded successfully.` : "No valid rows uploaded.",
       data: {
         inserted: validRows.length,
         failed: invalidRows.length,
         invalidRows,
-      }
-    }));
-  } catch (error) {
+      },
+    });
+  }
+  catch (error) {
     console.error("Upload error:", error);
     next(error);
   }
 };
 
-export const addMappedHeaders = async (
-  token: any,
-  bodyData: any,
-  res: Response,
-  next: NextFunction
-) => {
+//  add mapped headers  //
+export const addMappedHeaders = async (token: any, bodyData: any, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const headerMappingRepo = AppDataSource.getRepository(SupplierInvoicesMapping);
-
-    const supplier = await supplierRepository.findOneBy({
-      id: decoded.id,
-      email: decoded.email.toLowerCase(),
-    });
+    const supplier = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(
+      throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
-          message: "Supplier does not exist",
+          message: MESSAGES.USER_NOT_EXISTS,
         })
       );
     }
@@ -270,7 +250,8 @@ export const addMappedHeaders = async (
       });
 
       await headerMappingRepo.save(existingMapping);
-    } else {
+    }
+    else {
       const newMapping = headerMappingRepo.create({
         ...mapping,
         supplier: supplier,
@@ -280,38 +261,28 @@ export const addMappedHeaders = async (
     }
 
     return CommonUtilities.sendResponsData({
-      res,
       code: 200,
       message: "Header mapping saved successfully",
     });
-  } catch (error) {
+  }
+  catch (error) {
     next(error);
   }
 };
 
-// get headers api
-
-export const getInvoicesHeaders = async (
-  token: any,
-  res: Response,
-  next: NextFunction
-) => {
+//  get headers api   //
+export const getInvoicesHeaders = async (token: any, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-
-    const supplierRepository = AppDataSource.getRepository(Supplier);
-    const headerMappingRepo = AppDataSource.getRepository(SupplierInvoicesMapping);
-
-    const supplier = await supplierRepository.findOneBy({
-      id: decoded.id,
-      email: decoded.email.toLowerCase(),
-    });
+    const supplier = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
 
     if (!supplier) {
-      return res.status(400).json(CommonUtilities.sendResponsData({
-        code: 400,
-        message: MESSAGES.USER_NOT_EXISTS,
-      }));
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
     }
 
     const existingMapping = await headerMappingRepo.findOne({
@@ -320,15 +291,12 @@ export const getInvoicesHeaders = async (
     });
 
     return CommonUtilities.sendResponsData({
-      res,
       code: 200,
       message: "Headers mapping fetched successfully",
       data: existingMapping || {},
     });
-  } catch (error) {
+  }
+  catch (error) {
     next(error);
   }
 };
-
-
-
