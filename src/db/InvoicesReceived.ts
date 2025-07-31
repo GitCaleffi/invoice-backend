@@ -6,32 +6,28 @@ export class InvoicesReceived {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: "" })
+  @Column({ nullable: true })
   invoice_number: string;
 
   @Column({ type: "timestamp", nullable: true })
   invoice_date: Date;
 
-  @Column({ default: "" })
+  @Column({ nullable: true })
   order_number: string;
 
-  @Column({ default: "" })
+  @Column({ nullable: true })
   article_code: string;
 
   @Column({ default: 0 })
   quantity: number;
 
-  // @Column({ default: 0 })
-  // price: number;
-
   @Column('numeric', { precision: 10, scale: 2, default: 0 })
   price: number;
 
-
-  @Column()
+  @Column({ nullable: true })
   currency: string;
 
-  @Column()
+  @Column({ nullable: true })
   description: string;
 
   @Column({ type: "timestamp", nullable: true })
@@ -40,10 +36,10 @@ export class InvoicesReceived {
   @Column()
   supplier_code: string;
 
-  @Column()
+  @Column({ nullable: true })
   production_lot: string;
 
-  @Column()
+  @Column({ nullable: true })
   processed: string;
 
   @Column({ type: "timestamp", nullable: true })

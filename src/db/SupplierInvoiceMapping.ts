@@ -2,55 +2,55 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { Supplier } from "./Supplier";
 
 @Entity()
-export class SupplierInvoicesMapping  {
+export class SupplierInvoicesMapping {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: null })
+  @Column({ nullable: true })
   invoice_number: string;
 
-  @Column({ default: null  })
+  @Column({ nullable: true })
   invoice_date: string;
 
-  @Column({  default: null})
+  @Column({ nullable: true })
   order_number: string;
 
-  @Column({  default: null })
+  @Column({ nullable: true })
   article_code: string;
 
-  @Column({ default: null  })
+  @Column({ nullable: true })
   quantity: string;
 
-  @Column({ default: null  })
+  @Column({ nullable: true })
   price: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   currency: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   description: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   expected_delivery_date: string;
 
-  @Column({ default: null})
-  supplier_code: string;
+  // @Column({ nullable: true })
+  // supplier_code: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   production_lot: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   processed: string;
 
-  @Column({ default: null})
+  @Column({ nullable: true })
   insertion_date: string;
 
   @Column({ default: false })
   isDeleted: boolean;
 
   @OneToOne(() => Supplier, { onDelete: "CASCADE" })
-  @JoinColumn({name: "supplierId"}) 
-  supplier: Supplier; 
+  @JoinColumn({ name: "supplierId" })
+  supplier: Supplier;
 
   @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;

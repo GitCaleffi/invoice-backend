@@ -1,7 +1,7 @@
 export const MESSAGES = {
   USER_NOT_EXISTS: "Questo utente non esiste. Controlla i tuoi dati",
   SUCCESS: "Azione completata con successo",
-  LOGIN_CREDENTIAL_REQUIRED: "Sono richiesti il codice fornitore e la password",
+  LOGIN_CREDENTIAL_REQUIRED: "Sono richiesti e-mail e password",
   REGISTER_SUCCESS: "Grazie per esserti registrato con noi",
   LOGIN_SUCCESS: "Hai effettuato l'accesso con successo",
   LOGOUT_SUCCESS: "Hai effettuato correttamente il logout",
@@ -37,4 +37,6 @@ export const MESSAGES = {
   INVENTORY_DELETED: "Inventario svuotato con successo",
   INVENTORY_DETAILS: "Dettagli inventario recuperati correttamente",
   INVENTORY_UPDATED: "Inventario aggiornato correttamente",
+  EMAIL_REQUIRED: "E-mail richiesta",
+  EMAIL_SEND_ERROR: "Impossibile inviare l'e-mail in questo momento. Riprova più tardi.",
 }

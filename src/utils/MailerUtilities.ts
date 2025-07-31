@@ -3,6 +3,8 @@ import * as nodemailer from "nodemailer";
 import { HTTP400Error, HTTP404Error, HTTP403Error } from "./httpErrors";
 var sgTransport = require('nodemailer-sendgrid-transport');
 import 'dotenv/config';
+import { CommonUtilities } from "./CommonUtilities";
+import { MESSAGES } from "./messages";
 
 export class MailerUtilities {
 
@@ -39,9 +41,20 @@ export class MailerUtilities {
             ]
         }
 
-        const mailRes = await mailer.sendMail(message);
-        console.log("mailRes", mailRes);
-        return mailRes;
+        try {
+            const mailRes = await mailer.sendMail(message);
+            console.log("mailRes", mailRes);
+            return mailRes;
+        }
+        catch (err: any) {
+            console.error("Failed to send email:", err?.response?.body || err);
+            throw new HTTP400Error(
+                CommonUtilities.sendResponsData({
+                    code: 400,
+                    message: MESSAGES.EMAIL_SEND_ERROR,
+                })
+            );
+        }
     }
 
 

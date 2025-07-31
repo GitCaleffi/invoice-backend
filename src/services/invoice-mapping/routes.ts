@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import 'dotenv/config';
-import { getInvoices, uploadInvoiceCsv, addMappedHeaders, getInvoicesHeaders, deleteInvoiceById, updateInvoiceById } from "./controller";
+import { getInvoices, uploadInvoiceCsv, addMappedHeaders, getInvoicesHeaders, deleteInvoiceById } from "./controller";
 import { checkAuthenticate } from "./middleware/check";
 
 const basePath = process.env.BASE_PATH || "/api/v1/";
@@ -16,7 +16,7 @@ export default [
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await getInvoices(req.get("Authorization"), req.query, res, next);
+        const result = await getInvoices(req.get("Authorization"), req.query, next);
         res.status(200).send(result);
       },
     ],
@@ -29,19 +29,20 @@ export default [
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await uploadInvoiceCsv(req.get("Authorization"), req.body, res, next);
+        const result = await uploadInvoiceCsv(req.get("Authorization"), req.body, next);
         res.status(200).send(result);
       },
     ],
   },
 
+  //  add mapping headers  // 
   {
     path: currentPathURL + "/addMappingHeaders",
     method: "post",
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await addMappedHeaders(req.get("Authorization"), req.body, res, next);
+        const result = await addMappedHeaders(req.get("Authorization"), req.body, next);
         res.status(200).send(result);
       },
     ],
@@ -54,7 +55,7 @@ export default [
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await getInvoicesHeaders(req.get("Authorization"), res, next);
+        const result = await getInvoicesHeaders(req.get("Authorization"), next);
         res.status(200).send(result);
       },
     ],
@@ -66,7 +67,7 @@ export default [
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await deleteInvoiceById(req.get("Authorization"), req.params, res, next);
+        const result = await deleteInvoiceById(req.get("Authorization"), req.params, next);
         res.status(200).send(result);
       },
     ],

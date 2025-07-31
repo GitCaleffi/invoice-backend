@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import 'dotenv/config';
-import { isEmailLinked, addEmail, forgotPassword, getProfileDetails, login, resetPassword, updateProfile, verifyAccountLink, verifyResetLink, changePassword } from "./controller";
+import { isEmailLinked, addPassword, forgotPassword, getProfileDetails, login, resetPassword, updateProfile, verifyAccountLink, verifyResetLink, changePassword } from "./controller";
 
 const basePath = process.env.BASE_PATH || "/api/v1/";
 const currentPath = "auth";
@@ -20,13 +20,13 @@ export default [
     ],
   },
 
-  //  add email and password  //
+  //  link password with email  //
   {
-    path: currentPathURL + "/addEmail",
+    path: currentPathURL + "/addPassword",
     method: "post",
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await addEmail(req.body, next);
+        const result = await addPassword(req.body, next);
         res.status(200).send(result);
       },
     ],
