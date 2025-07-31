@@ -112,9 +112,7 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
 //  verify account link  //
 export const verifyAccountLink = async (query: any, next: NextFunction) => {
   try {
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: query.email.toLowerCase(), isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -163,9 +161,7 @@ export const login = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ supplier_code: bodyData.supplier_code, isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -217,9 +213,7 @@ export const login = async (bodyData: any, next: NextFunction) => {
 //  Forgot Password  //
 export const forgotPassword = async (bodyData: any, next: NextFunction) => {
   try {
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -268,9 +262,7 @@ export const forgotPassword = async (bodyData: any, next: NextFunction) => {
 //  Verify Reset Link  //
 export const verifyResetLink = async (params: any, query: any, next: NextFunction) => {
   try {
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: params.id, isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -322,9 +314,7 @@ export const verifyResetLink = async (params: any, query: any, next: NextFunctio
 //  Reset Password  //
 export const resetPassword = async (bodyData: any, next: any) => {
   try {
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email.toLowerCase(), isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -361,9 +351,7 @@ export const resetPassword = async (bodyData: any, next: any) => {
 export const getProfileDetails = async (token: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -389,9 +377,7 @@ export const getProfileDetails = async (token: any, next: any) => {
 export const updateProfile = async (token: any, bodyData: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
@@ -423,9 +409,7 @@ export const updateProfile = async (token: any, bodyData: any, next: any) => {
 export const changePassword = async (token: any, bodyData: any, next: any) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    // const supplierRepository = AppDataSource.getRepository(Supplier);
     const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, supplier_code: decoded.supplier_code, isDeleted: false });
-
     if (!supplier) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({

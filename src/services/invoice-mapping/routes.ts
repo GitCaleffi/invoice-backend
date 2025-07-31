@@ -16,7 +16,7 @@ export default [
     handler: [
       checkAuthenticate,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = await getInvoices(req.get("Authorization"), res, next);
+        const result = await getInvoices(req.get("Authorization"), req.query, res, next);
         res.status(200).send(result);
       },
     ],

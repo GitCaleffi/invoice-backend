@@ -16,8 +16,7 @@ const parseDate = (value: string | null | undefined): Date | undefined => {
 };
 
 //  get Invoice Mapping list  //
-
-export const getInvoices = async (token: any, res: Response, next: NextFunction) => {
+export const getInvoices = async (token: any, queryData: any, res: Response, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
 
@@ -35,6 +34,10 @@ export const getInvoices = async (token: any, res: Response, next: NextFunction)
     }
 
     const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
+
+    const limit = queryData?.limit || 10;
+    const page = queryData?.page || 1;
+    const search = (queryData?.search || "").trim().toLowerCase();
 
     const invoices = await invoiceRepository.find({
       where: {
