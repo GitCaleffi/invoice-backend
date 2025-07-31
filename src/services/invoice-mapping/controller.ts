@@ -17,7 +17,7 @@ const parseDate = (value: string | null | undefined): Date | undefined => {
 
 //  get Invoice Mapping list  //
 
-export const getInvoices = async (token: any, res: Response, next: NextFunction) => {
+export const getInvoices = async (token: any, queryData: any, res: Response, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
 
@@ -35,25 +35,62 @@ export const getInvoices = async (token: any, res: Response, next: NextFunction)
     }
 
     const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
+    const limit = Number(queryData?.limit) || 10;
+    const page = Number(queryData?.page) || 1;
+    const search = (queryData?.search || "").trim().toLowerCase();
 
-    const invoices = await invoiceRepository.find({
-      where: {
-        supplier: { id: supplier.id },
-        isDeleted: false
-      },
-      relations: ["supplier"],
-      order: { insertion_date: "DESC" }
-    });
+    const fromDate = queryData?.fromDate ? new Date(queryData.fromDate) : null;
+    const toDate = queryData?.toDate ? new Date(queryData.toDate) : null;
+
+    // search
+    const queryBuilder = invoiceRepository
+      .createQueryBuilder("invoice")
+      .leftJoin("invoice.supplier", "supplier")
+      .where("supplier.id = :supplierId", { supplierId: supplier.id })
+      .andWhere("invoice.isDeleted = false");
+
+    if (search) {
+      queryBuilder.andWhere(new Brackets(qb => {
+        qb.where("LOWER(invoice.invoice_number) LIKE :search", { search: `%${search}%` })
+          .orWhere("LOWER(invoice.order_number) LIKE :search", { search: `%${search}%` })
+          .orWhere("LOWER(invoice.article_code) LIKE :search", { search: `%${search}%` })
+          .orWhere("LOWER(invoice.supplier_code) LIKE :search", { search: `%${search}%` })
+          .orWhere("LOWER(invoice.description) LIKE :search", { search: `%${search}%` })
+          .orWhere("LOWER(invoice.production_lot) LIKE :search", { search: `%${search}%` });
+      }));
+    }
+
+    // date filter
+    if (fromDate && toDate) {
+      queryBuilder.andWhere("invoice.invoice_date BETWEEN :fromDate AND :toDate", {
+        fromDate,
+        toDate,
+      });
+    } else if (fromDate) {
+      queryBuilder.andWhere("invoice.invoice_date >= :fromDate", { fromDate });
+    } else if (toDate) {
+      queryBuilder.andWhere("invoice.invoice_date <= :toDate", { toDate });
+    }
+
+    //  pagination & ordering
+    queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy("invoice.insertion_date", "DESC");
+
+    const [invoices, total] = await queryBuilder.getManyAndCount();
 
     return res.status(200).json(CommonUtilities.sendResponsData({
       code: 200,
       message: "Invoices fetched successfully",
       data: invoices,
+      totalRecord: total,
     }));
   } catch (error) {
     next(error);
   }
 };
+
 
 export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response, next: NextFunction) => {
   try {
@@ -130,7 +167,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
         //     value: row.quantity,
         //   });
         // }
-        
+
         const orderedQty = Number(matchedPO.ordered_quantity);
         const uploadedQty = Number(row.quantity);
         const maxAllowedQty = orderedQty * 1.1;
@@ -322,6 +359,156 @@ export const getInvoicesHeaders = async (
       message: "Headers mapping fetched successfully",
       data: existingMapping || {},
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//  delete Invoice by id  //
+
+export const deleteInvoiceById = async (token: any, params: any, res: Response, next: NextFunction) => {
+  try {
+    const decoded: any = await CommonUtilities.getDecoded(token);
+    const supplierRepository = AppDataSource.getRepository(Supplier);
+    const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
+    if (!supplier) {
+      return res.status(400).json(CommonUtilities.sendResponsData({
+        code: 400,
+        message: MESSAGES.USER_NOT_EXISTS,
+      }));
+    }
+
+    const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
+    const invoice: any = await invoiceRepository.findOneBy({ id: params.id, isDeleted: false });
+    if (!invoice) {
+      return res.status(400).json(CommonUtilities.sendResponsData({
+        code: 400,
+        message: MESSAGES.INVENTORY_NOT_EXISTS,
+      }));
+    }
+    invoice.isDeleted = true;
+    const data = await invoiceRepository.save(invoice);
+
+    return CommonUtilities.sendResponsData({
+      code: 200,
+      message: MESSAGES.INVENTORY_DELETED,
+    });
+  }
+  catch (error) {
+    next(error)
+  }
+};
+
+//  Update Invoice  //
+export const updateInvoiceById = async (token: any, invoiceId: number, updatedData: any, res: Response, next: NextFunction) => {
+  try {
+    const decoded: any = await CommonUtilities.getDecoded(token);
+
+    const supplierRepo = AppDataSource.getRepository(Supplier);
+    const poRepo = AppDataSource.getRepository(PurchaseOrders);
+    const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
+
+    const supplier = await supplierRepo.findOneBy({
+      id: decoded.id,
+      email: decoded.email.toLowerCase(),
+    });
+
+    if (!supplier) {
+      return res.status(400).json(CommonUtilities.sendResponsData({
+        code: 400,
+        message: MESSAGES.USER_NOT_EXISTS,
+      }));
+    }
+
+    const invoice = await invoiceRepo.findOne({
+      where: {
+        id: invoiceId,
+        supplier: { id: supplier.id },
+        isDeleted: false,
+      },
+      relations: ["supplier"],
+    });
+
+    if (!invoice) {
+      return res.status(404).json(CommonUtilities.sendResponsData({
+        code: 404,
+        message: "Fattura non trovata",
+      }));
+    }
+
+    const matchedPO = await poRepo.findOneBy({
+      order_number: String(updatedData.order_number),
+      supplier_code: supplier.supplier_code,
+    });
+
+    const rowErrors: any[] = [];
+
+    if (!matchedPO) {
+      rowErrors.push({
+        reason: "Nessun ordine di acquisto corrispondente",
+        key: "order_number",
+        value: updatedData.order_number,
+      });
+    } else {
+      if (matchedPO.article_code !== String(updatedData.article_code)) {
+        rowErrors.push({
+          reason: "Mancata corrispondenza del codice articolo",
+          key: "article_code",
+          value: updatedData.article_code,
+        });
+      }
+
+      const orderedQty = Number(matchedPO.ordered_quantity);
+      const uploadedQty = Number(updatedData.quantity);
+      const maxAllowedQty = orderedQty * 1.1;
+
+      if (uploadedQty > maxAllowedQty) {
+        rowErrors.push({
+          reason: `La quantità supera il limite massimo consentito del 10% (Ordine: ${orderedQty}, Massimo consentito: ${Math.floor(maxAllowedQty)})`,
+          key: "quantity",
+          value: updatedData.quantity,
+        });
+      }
+
+      if (Number(matchedPO.unit_price) !== Number(updatedData.price)) {
+        rowErrors.push({
+          reason: "Mancata corrispondenza del prezzo unitario",
+          key: "price",
+          value: updatedData.price,
+        });
+      }
+    }
+
+    if (rowErrors.length > 0) {
+      return res.status(400).json(CommonUtilities.sendResponsData({
+        code: 400,
+        message: "Validation failed",
+        data: rowErrors,
+      }));
+    }
+
+    Object.assign(invoice, {
+      invoice_number: updatedData.invoice_number,
+      invoice_date: parseDate(updatedData.invoice_date),
+      order_number: updatedData.order_number,
+      article_code: updatedData.article_code,
+      quantity: updatedData.quantity,
+      price: updatedData.price,
+      currency: updatedData.currency,
+      description: updatedData.description,
+      expected_delivery_date: parseDate(updatedData.expected_delivery_date),
+      production_lot: updatedData.production_lot,
+      processed: "true",
+      insertion_date: new Date(),
+    });
+
+    await invoiceRepo.save(invoice);
+
+    return res.status(200).json(CommonUtilities.sendResponsData({
+      code: 200,
+      message: "Fattura aggiornata con successo",
+      data: invoice,
+    }));
   } catch (error) {
     next(error);
   }
