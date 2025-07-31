@@ -126,9 +126,21 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
           });
         }
 
-        if (Number(matchedPO.ordered_quantity) !== Number(row.quantity)) {
+        // if (Number(matchedPO.ordered_quantity) !== Number(row.quantity)) {
+        //   rowErrors.push({
+        //     reason: "Mancata corrispondenza della quantità",
+        //     key: "quantity",
+        //     value: row.quantity,
+        //   });
+        // }
+        
+        const orderedQty = Number(matchedPO.ordered_quantity);
+        const uploadedQty = Number(row.quantity);
+        const maxAllowedQty = orderedQty * 1.1;
+
+        if (uploadedQty > maxAllowedQty) {
           rowErrors.push({
-            reason: "Mancata corrispondenza della quantità",
+            reason: `La quantità supera il limite massimo consentito del 10% (Ordine: ${orderedQty}, Massimo consentito: ${maxAllowedQty.toFixed(2)})`,
             key: "quantity",
             value: row.quantity,
           });
@@ -141,8 +153,6 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, res: Response,
             value: row.price,
           });
         }
-
-
       }
 
       if (rowErrors.length > 0) {
