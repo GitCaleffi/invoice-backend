@@ -139,7 +139,8 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
       const rowErrors: any[] = [];
 
       const matchedPO = existingPOs.find(po =>
-        po.order_number === String(row.order_number)
+        po.order_number === String(row.order_number) &&
+        po.article_code === String(row.article_code)
       );
 
       if (!matchedPO) {
@@ -150,7 +151,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         });
       }
       else {
-        if (matchedPO.article_code !== String(row.article_code)) {
+        if (matchedPO.article_code != String(row.article_code)) {
           rowErrors.push({
             reason: "Mancata corrispondenza del codice articolo",
             key: "article_code",
