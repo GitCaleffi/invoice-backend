@@ -5,36 +5,80 @@ import { AppDataSource } from "../../utils/ormconfig";
 import { MESSAGES } from "../../utils/messages";
 import { PurchaseOrders } from '../../db/PurchaseOrders';
 import 'dotenv/config';
+import { InvoicesReceived } from '../../db/InvoicesReceived';
+
+const supplierRepository = AppDataSource.getRepository(Supplier);
+const orderRepository = AppDataSource.getRepository(PurchaseOrders);
+const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
 
 
 //  get Orders  //
 export const getOrders = async (token: any, queryData: any, res: Response, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const userRepository = AppDataSource.getRepository(Supplier);
-    const user: any = await userRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase() });
-    if (!user) {
+    const supplier: any = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
+    if (!supplier) {
       return res.status(400).json(CommonUtilities.sendResponsData({
         code: 400,
         message: MESSAGES.USER_NOT_EXISTS,
       }));
     }
+    const supplierCodes = Array.isArray(supplier.supplier_code) ? supplier.supplier_code : [supplier.supplier_code];
 
-    const orderRepository = AppDataSource.getRepository(PurchaseOrders);
-    const limit = queryData?.limit || 10;
+    const limit = queryData?.limit || 20;
     const page = queryData?.page || 1;
+    const skip = (page - 1) * limit;
 
-    const [orderList, total] = await orderRepository.findAndCount({
-      where: { supplier: user }, // Filter
-      skip: (page - 1) * limit, // Skip records based on pagination
-      take: limit, // Number of records per page
-      order: { id: "DESC" }, // Sort by latest
-    });
+    // Get orders for all supplier codes linked to this supplier
+    const [orders, total] = await orderRepository.createQueryBuilder("order")
+      .where("order.supplier_code IN (:...codes)", { codes: supplierCodes })
+      .orderBy("order.createdAt", "DESC")
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    const enrichedOrders = [];
+
+    for (const order of orders) {
+      // Find matching invoice for the same order_number, article_code, and supplier_code
+      const invoice = await invoiceRepository.findOne({
+        where: {
+          order_number: order.order_number,
+          article_code: order.article_code,
+          supplier_code: order.supplier_code,
+          isDeleted: false
+        }
+      });
+
+      // Calculate shipping rate if invoice exists
+      let shippingRate = null;
+      if (order.requested_date && invoice?.expected_delivery_date) {
+        const requested = new Date(order.requested_date).getTime();
+        const expected = new Date(invoice.expected_delivery_date).getTime();
+        const diffDays = Math.ceil((expected - requested) / (1000 * 60 * 60 * 24));
+        console.log('diffDays ====== ', diffDays);
+        
+        if (diffDays <= 0) {
+          shippingRate = "On Time";
+        } else if (diffDays <= 3) {
+          shippingRate = "Slight Delay";
+        } else {
+          shippingRate = "Delayed";
+        }
+      }
+
+      enrichedOrders.push({
+        ...order,
+        invoice: invoice || null,
+        accountStatus: supplier.accountVerified ? "Verified" : "Unverified",
+        shippingRate
+      });
+    }
 
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.SUCCESS,
-      data: orderList,
+      data: enrichedOrders,
       totalRecord: total,
     });
 
