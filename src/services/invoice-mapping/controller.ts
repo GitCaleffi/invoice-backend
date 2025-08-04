@@ -26,7 +26,12 @@ const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
 export const getInvoices = async (token: any, queryData: any, next: NextFunction) => {
   try {
     const decoded: any = await CommonUtilities.getDecoded(token);
-    const supplier = await supplierRepository.findOneBy({ id: decoded.id, email: decoded.email.toLowerCase(), isDeleted: false });
+
+    const supplier = await supplierRepository.findOneBy({
+      id: decoded.id,
+      email: decoded.email.toLowerCase(),
+      isDeleted: false,
+    });
 
     if (!supplier) {
       throw new HTTP400Error(
@@ -41,19 +46,23 @@ export const getInvoices = async (token: any, queryData: any, next: NextFunction
     const limit = Number(queryData?.limit) || 10;
     const page = Number(queryData?.page) || 1;
     const search = (queryData?.search || "").trim().toLowerCase();
-
     const fromDate = queryData?.fromDate ? new Date(queryData.fromDate) : null;
     const toDate = queryData?.toDate ? new Date(queryData.toDate) : null;
 
-    // search
-    const queryBuilder = invoiceRepository
+    const baseQuery = invoiceRepository
       .createQueryBuilder("invoice")
+      .select("invoice.invoice_number", "invoice_number")
+      .addSelect("COUNT(invoice.id)", "item_count")
+      .addSelect("SUM(invoice.quantity)", "total_quantity")
+      .addSelect("SUM(invoice.quantity * invoice.price)", "total_invoiced")
+      .addSelect("MAX(invoice.insertion_date)", "latest_insertion_date")
       .leftJoin("invoice.supplier", "supplier")
       .where("supplier.id = :supplierId", { supplierId: supplier.id })
       .andWhere("invoice.isDeleted = false");
 
+    // Filters
     if (search) {
-      queryBuilder.andWhere(new Brackets(qb => {
+      baseQuery.andWhere(new Brackets(qb => {
         qb.where("LOWER(invoice.invoice_number) LIKE :search", { search: `%${search}%` })
           .orWhere("LOWER(invoice.order_number) LIKE :search", { search: `%${search}%` })
           .orWhere("LOWER(invoice.article_code) LIKE :search", { search: `%${search}%` })
@@ -63,37 +72,119 @@ export const getInvoices = async (token: any, queryData: any, next: NextFunction
       }));
     }
 
-    // date filter
     if (fromDate && toDate) {
-      queryBuilder.andWhere("invoice.invoice_date BETWEEN :fromDate AND :toDate", {
-        fromDate,
-        toDate,
-      });
+      baseQuery.andWhere("invoice.invoice_date BETWEEN :fromDate AND :toDate", { fromDate, toDate });
     } else if (fromDate) {
-      queryBuilder.andWhere("invoice.invoice_date >= :fromDate", { fromDate });
+      baseQuery.andWhere("invoice.invoice_date >= :fromDate", { fromDate });
     } else if (toDate) {
-      queryBuilder.andWhere("invoice.invoice_date <= :toDate", { toDate });
+      baseQuery.andWhere("invoice.invoice_date <= :toDate", { toDate });
     }
 
-    //  pagination & ordering
-    queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .orderBy("invoice.insertion_date", "DESC");
+    baseQuery.groupBy("invoice.invoice_number");
 
-    const [invoices, total] = await queryBuilder.getManyAndCount();
+    const countQuery = AppDataSource
+      .createQueryBuilder()
+      .select("COUNT(*)", "count")
+      .from("(" + baseQuery.getQuery() + ")", "grouped_invoices")
+      .setParameters(baseQuery.getParameters());
+
+    const countResult = await countQuery.getRawOne();
+    const totalCount = Number(countResult.count || 0);
+
+    // Pagination and ordering
+    baseQuery
+      .orderBy("MAX(invoice.insertion_date)", "DESC")
+      .offset((page - 1) * limit)
+      .limit(limit);
+
+    const invoices = await baseQuery.getRawMany();
 
     return CommonUtilities.sendResponsData({
       code: 200,
-      message: "Invoices fetched successfully",
+      message: "Grouped invoices fetched successfully",
       data: invoices,
-      totalRecord: total,
+      totalRecord: totalCount,
     });
-  }
-  catch (error) {
+
+  } catch (error) {
     next(error);
   }
 };
+
+// details
+export const getInvoiceDetails = async (token: any, query: any, next: NextFunction) => {
+  try {
+    const decoded: any = await CommonUtilities.getDecoded(token);
+
+    const supplier = await supplierRepository.findOneBy({
+      id: decoded.id,
+      email: decoded.email.toLowerCase(),
+      isDeleted: false,
+    });
+
+    if (!supplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
+    }
+
+    const invoiceNumber = query.invoice_number;
+    if (!invoiceNumber) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: "Invoice number is required",
+        })
+      );
+    }
+
+    // Pagination values
+    const limit = Number(query.limit) || 10;
+    const page = Number(query.page) || 1;
+    const offset = (page - 1) * limit;
+
+    const invoiceRepository = AppDataSource.getRepository(InvoicesReceived);
+
+    // Get total count
+    const totalCount = await invoiceRepository.count({
+      where: {
+        invoice_number: invoiceNumber,
+        isDeleted: false,
+        supplier: { id: supplier.id },
+      },
+    });
+
+    // Get paginated data
+    const records = await invoiceRepository.find({
+      where: {
+        invoice_number: invoiceNumber,
+        isDeleted: false,
+        supplier: { id: supplier.id },
+      },
+      order: {
+        insertion_date: "DESC",
+      },
+      skip: offset,
+      take: limit,
+    });
+
+    return CommonUtilities.sendResponsData({
+      code: 200,
+      message: `Records fetched for invoice number: ${invoiceNumber}`,
+      data: records,
+      totalRecord: totalCount,
+      currentPage: page,
+      pageSize: limit,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunction) => {
   try {
@@ -373,119 +464,94 @@ export const deleteInvoiceById = async (token: any, params: any, next: NextFunct
 };
 
 //  Update Invoice  //
-// export const updateInvoiceById = async (token: any, invoiceId: number, updatedData: any, res: Response, next: NextFunction) => {
-//   try {
-//     const decoded: any = await CommonUtilities.getDecoded(token);
 
-//     const supplierRepo = AppDataSource.getRepository(Supplier);
-//     const poRepo = AppDataSource.getRepository(PurchaseOrders);
-//     const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
+export const updateInvoiceById = async (
+  token: any,
+  invoiceId: number,
+  updatedData: any,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const decoded: any = await CommonUtilities.getDecoded(token);
 
-//     const supplier = await supplierRepo.findOneBy({
-//       id: decoded.id,
-//       email: decoded.email.toLowerCase(),
-//     });
+    const supplier = await supplierRepository.findOneBy({
+      id: decoded.id,
+      email: decoded.email.toLowerCase(),
+      isDeleted: false,
+    });
 
-//     if (!supplier) {
-//       return res.status(400).json(CommonUtilities.sendResponsData({
-//         code: 400,
-//         message: MESSAGES.USER_NOT_EXISTS,
-//       }));
-//     }
+    if (!supplier) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: MESSAGES.USER_NOT_EXISTS,
+        })
+      );
+    }
 
-//     const invoice = await invoiceRepo.findOne({
-//       where: {
-//         id: invoiceId,
-//         supplier: { id: supplier.id },
-//         isDeleted: false,
-//       },
-//       relations: ["supplier"],
-//     });
+    const invoice = await invoiceRepo.findOne({
+      where: { id: invoiceId, supplier: { id: supplier.id }, isDeleted: false },
+      relations: ["supplier"],
+    });
 
-//     if (!invoice) {
-//       return res.status(404).json(CommonUtilities.sendResponsData({
-//         code: 404,
-//         message: "Fattura non trovata",
-//       }));
-//     }
+    if (!invoice) {
+      throw new HTTP400Error(
+        CommonUtilities.sendResponsData({
+          code: 400,
+          message: "Invoice not found",
+        })
+      );
+    }
 
-//     const matchedPO = await poRepo.findOneBy({
-//       order_number: String(updatedData.order_number),
-//       supplier_code: supplier.supplier_code,
-//     });
+    const immutableFields = ["invoice_number", "order_number", "article_code"];
+    for (const field of immutableFields) {
+      if (
+        updatedData.hasOwnProperty(field) &&
+        String(updatedData[field]) !== String((invoice as any)[field])
+      ) {
+        throw new HTTP400Error(
+          CommonUtilities.sendResponsData({
+            code: 400,
+            message: `Field '${field}' is not editable.`,
+          })
+        );
+      }
+    }
 
-//     const rowErrors: any[] = [];
+    Object.assign(invoice, {
+      quantity: updatedData.quantity ?? invoice.quantity,
+      price: updatedData.price ?? invoice.price,
+      currency: updatedData.currency ?? invoice.currency,
+      description: updatedData.description ?? invoice.description,
+      expected_delivery_date: updatedData.expected_delivery_date
+        ? new Date(updatedData.expected_delivery_date)
+        : invoice.expected_delivery_date,
+      invoice_date: updatedData.invoice_date
+        ? new Date(updatedData.invoice_date)
+        : invoice.invoice_date,
 
-//     if (!matchedPO) {
-//       rowErrors.push({
-//         reason: "Nessun ordine di acquisto corrispondente",
-//         key: "order_number",
-//         value: updatedData.order_number,
-//       });
-//     } else {
-//       if (matchedPO.article_code !== String(updatedData.article_code)) {
-//         rowErrors.push({
-//           reason: "Mancata corrispondenza del codice articolo",
-//           key: "article_code",
-//           value: updatedData.article_code,
-//         });
-//       }
+      production_lot: updatedData.production_lot ?? invoice.production_lot,
+      processed: true,
+      insertion_date: new Date(),
+    });
 
-//       const orderedQty = Number(matchedPO.ordered_quantity);
-//       const uploadedQty = Number(updatedData.quantity);
-//       const maxAllowedQty = orderedQty * 1.1;
+    const updatedInvoice = await invoiceRepo.save(invoice);
 
-//       if (uploadedQty > maxAllowedQty) {
-//         rowErrors.push({
-//           reason: `La quantità supera il limite massimo consentito del 10% (Ordine: ${orderedQty}, Massimo consentito: ${Math.floor(maxAllowedQty)})`,
-//           key: "quantity",
-//           value: updatedData.quantity,
-//         });
-//       }
+    return res.status(200).json(
+      CommonUtilities.sendResponsData({
+        code: 200,
+        message: "Invoice updated successfully",
+        data: updatedInvoice,
+      })
+    );
+  } catch (err) {
+    console.error("Invoice update error:", err);
+    next(err);
+  }
+};
 
-//       if (Number(matchedPO.unit_price) !== Number(updatedData.price)) {
-//         rowErrors.push({
-//           reason: "Mancata corrispondenza del prezzo unitario",
-//           key: "price",
-//           value: updatedData.price,
-//         });
-//       }
-//     }
 
-//     if (rowErrors.length > 0) {
-//       return res.status(400).json(CommonUtilities.sendResponsData({
-//         code: 400,
-//         message: "Validation failed",
-//         data: rowErrors,
-//       }));
-//     }
-
-//     Object.assign(invoice, {
-//       invoice_number: updatedData.invoice_number,
-//       invoice_date: parseDate(updatedData.invoice_date),
-//       order_number: updatedData.order_number,
-//       article_code: updatedData.article_code,
-//       quantity: updatedData.quantity,
-//       price: updatedData.price,
-//       currency: updatedData.currency,
-//       description: updatedData.description,
-//       expected_delivery_date: parseDate(updatedData.expected_delivery_date),
-//       production_lot: updatedData.production_lot,
-//       processed: "true",
-//       insertion_date: new Date(),
-//     });
-
-//     await invoiceRepo.save(invoice);
-
-//     return res.status(200).json(CommonUtilities.sendResponsData({
-//       code: 200,
-//       message: "Fattura aggiornata con successo",
-//       data: invoice,
-//     }));
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 
 
