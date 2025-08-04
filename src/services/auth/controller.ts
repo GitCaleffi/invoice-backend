@@ -96,7 +96,9 @@ export const addPassword = async (bodyData: any, next: NextFunction) => {
       { link: process.env.accountVerifyBaseUrl + '?email=' + bodyData.email.toLowerCase() + '&otp=' + randomOTP + '&type=accountVerified' },
       { async: true }
     );
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
+    // let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
+
+    let mailResponse = await MailerUtilities.sendSendgridSMTPMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Account Verify Link", text: messageHtml });
 
     // await supplierRepository.save(existingSupplier);
     return CommonUtilities.sendResponsData({
@@ -242,7 +244,9 @@ export const forgotPassword = async (bodyData: any, next: NextFunction) => {
       { async: true }
     );
 
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Forgot Password link", text: messageHtml });
+    // let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Forgot Password link", text: messageHtml });
+
+    let mailResponse = await MailerUtilities.sendSendgridSMTPMail({ recipient_email: [bodyData.email.toLowerCase()], subject: "Forgot Password link", text: messageHtml });
 
     supplier['otp'] = randomOTP;
     supplier['otpVerified'] = false;
@@ -330,7 +334,9 @@ export const resetPassword = async (bodyData: any, next: any) => {
       process.cwd() + "/src/views/changePassword.email.ejs",
       { async: true }
     );
-    let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [supplier.email.toLowerCase()], subject: "Change Password", text: messageHtml });
+    // let mailResponse = await MailerUtilities.sendSendgridMail({ recipient_email: [supplier.email.toLowerCase()], subject: "Change Password", text: messageHtml });
+
+    let mailResponse = await MailerUtilities.sendSendgridSMTPMail({ recipient_email: [supplier.email.toLowerCase()], subject: "Change Password", text: messageHtml });
 
     supplier.password = pass;
     await supplierRepository.save(supplier); // Saving the updated supplier
