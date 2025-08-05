@@ -18,5 +18,5 @@ export const AppDataSource = new DataSource({
   synchronize: true,  // Set to false in production
   logging: false,
   entities: [Supplier, InvoicesReceived, PurchaseOrders, SupplierInvoicesMapping],
-  ssl: true,
+  // ssl: true,
 });
