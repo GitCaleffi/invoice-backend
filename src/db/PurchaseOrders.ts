@@ -12,7 +12,7 @@ export class PurchaseOrders {
   @Column()
   article_code: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   requested_date: Date;
 
   @Column({ default: 0 })
@@ -24,10 +24,10 @@ export class PurchaseOrders {
   @Column()
   supplier_code: string;
 
-  @Column({ nullable:true})
+  @Column({ nullable: true })
   production_lot: string;
 
-  @Column({ nullable:true})
+  @Column({ nullable: true })
   currency: string;
 
   @Column({ default: false })
