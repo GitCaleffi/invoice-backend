@@ -239,6 +239,8 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
           reason: "Nessun ordine di acquisto corrispondente",
           key: "order_number",
           value: row.order_number,
+          order_number: row.order_number,
+          article_code: row.article_code
         });
       }
       else {
@@ -247,6 +249,9 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
             reason: "Mancata corrispondenza del codice articolo",
             key: "article_code",
             value: row.article_code,
+            order_number: row.order_number,
+            article_code: row.article_code
+
           });
         }
 
@@ -259,6 +264,8 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
             reason: `La quantità supera il limite massimo consentito del 10% (Ordine: ${orderedQty}, Massimo consentito: ${maxAllowedQty.toFixed(2)})`,
             key: "quantity",
             value: row.quantity,
+            order_number: row.order_number,
+            article_code: row.article_code
           });
         }
 
@@ -267,6 +274,9 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
             reason: "Mancata corrispondenza del prezzo unitario",
             key: "price",
             value: row.price,
+            order_number: row.order_number,
+            article_code: row.article_code
+
           });
         }
       }
