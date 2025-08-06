@@ -51,6 +51,8 @@ export default [
     handler: [
       async (req: Request, res: Response, next: NextFunction) => {
         const result = await login(req.body, next);
+        console.log('result ----- ', result);
+        
         res.status(200).send(result);
       },
     ],

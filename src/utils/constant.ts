@@ -5,4 +5,4 @@ export const SUPER_USER_EMAIL = [
   
 export const SUPER_USER_PASSWORD = 'Caleffi1.'
 
-export const SUPER_USER_SUPPLIER_ID = 'Admin'
+export const SUPER_USER_SUPPLIER_CODE = ['Admin']
