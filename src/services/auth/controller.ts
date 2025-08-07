@@ -30,15 +30,15 @@ export const isEmailLinked = async (bodyData: any, next: NextFunction) => {
       );
     };
 
-    // check if it's super user
-    const isSuperUser = SUPER_USER_EMAIL.includes(bodyData.email.trim().toLowerCase());
-    if (isSuperUser) {
-      return CommonUtilities.sendResponsData({
-        code: 200,
-        message: MESSAGES.SUCCESS,
-        data: { emailExists: true }
-      });
-    }
+    // // check if it's super user
+    // const isSuperUser = SUPER_USER_EMAIL.includes(bodyData.email.trim().toLowerCase());
+    // if (isSuperUser) {
+    //   return CommonUtilities.sendResponsData({
+    //     code: 200,
+    //     message: MESSAGES.SUCCESS,
+    //     data: { emailExists: true }
+    //   });
+    // }
 
     //  trim the email leading/trailing whitespace on the DB side and return matched data
     const existingSupplier = await supplierRepository
@@ -174,37 +174,37 @@ export const login = async (bodyData: any, next: NextFunction) => {
       );
     }
 
-    // check if it's super-user
-    const isSuperUser = SUPER_USER_EMAIL.includes(bodyData.email.trim().toLowerCase());
-    console.log('isSuperUser ==== ', isSuperUser);
+    // // check if it's super-user
+    // const isSuperUser = SUPER_USER_EMAIL.includes(bodyData.email.trim().toLowerCase());
+    // console.log('isSuperUser ==== ', isSuperUser);
 
-    if (isSuperUser) {
-      if (bodyData.password !== SUPER_USER_PASSWORD) {
-        throw new HTTP400Error(
-          CommonUtilities.sendResponsData({
-            code: 400,
-            message: MESSAGES.INVALID_PASSWORD,
-          })
-        );
-      }
+    // if (isSuperUser) {
+    //   if (bodyData.password !== SUPER_USER_PASSWORD) {
+    //     throw new HTTP400Error(
+    //       CommonUtilities.sendResponsData({
+    //         code: 400,
+    //         message: MESSAGES.INVALID_PASSWORD,
+    //       })
+    //     );
+    //   }
 
-      let supplierToken = await CommonUtilities.createJWTToken({
-        id: 0,
-        email: bodyData.email.trim().toLowerCase(),
-        supplier_code: SUPER_USER_SUPPLIER_CODE
-      });
+    //   let supplierToken = await CommonUtilities.createJWTToken({
+    //     id: 0,
+    //     email: bodyData.email.trim().toLowerCase(),
+    //     supplier_code: SUPER_USER_SUPPLIER_CODE
+    //   });
 
-      return CommonUtilities.sendResponsData({
-        code: 200,
-        message: MESSAGES.LOGIN_SUCCESS,
-        data: {
-          id: 0,
-          email: bodyData.email.trim().toLowerCase(),
-          supplier_code: SUPER_USER_SUPPLIER_CODE,
-          accessToken: supplierToken
-        }
-      });
-    }
+    //   return CommonUtilities.sendResponsData({
+    //     code: 200,
+    //     message: MESSAGES.LOGIN_SUCCESS,
+    //     data: {
+    //       id: 0,
+    //       email: bodyData.email.trim().toLowerCase(),
+    //       supplier_code: SUPER_USER_SUPPLIER_CODE,
+    //       accessToken: supplierToken
+    //     }
+    //   });
+    // }
 
     const supplier: any = await supplierRepository.findOneBy({ email: bodyData.email?.trim().toLowerCase(), isDeleted: false });
     if (!supplier) {
