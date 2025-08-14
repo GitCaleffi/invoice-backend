@@ -30,6 +30,9 @@ export class PurchaseOrders {
   @Column({ nullable: true })
   currency: string;
 
+  @Column({ type: "timestamp", nullable: true })
+  arrivalDate: Date;
+
   @Column({ default: false })
   isDeleted: boolean;
 
