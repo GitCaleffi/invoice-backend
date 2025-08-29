@@ -38,24 +38,44 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
     const skip = (page - 1) * limit;
     const search = queryData?.search?.trim()?.toLowerCase();
 
-    const orderQuery = orderRepository.createQueryBuilder("order")
-      .where("order.supplier_code IN (:...codes)", { codes: supplierCodes });
+    // Step 1: Base query (without pagination) for OTIF calculation
+    const baseOrderQuery = orderRepository.createQueryBuilder("order")
+      .where("order.supplier_code IN (:...codes)", { codes: supplierCodes })
+      .andWhere("order.isDeleted = :isDeleted", { isDeleted: false });
 
     if (search) {
-      orderQuery.andWhere(
+      baseOrderQuery.andWhere(
         `(LOWER(order.order_number) ILIKE :search OR LOWER(order.article_code) ILIKE :search)`,
         { search: `%${search}%` }
       );
     }
 
-    const [orders, total] = await orderQuery
+    // Fetch ALL orders for OTIF calculation
+    const allOrders = await baseOrderQuery.getMany();
+
+    // Calculate OTIF Rate on all data
+    let onTimeOrders = 0;
+    for (const order of allOrders) {
+      const isOnTime =
+        order.ordered_quantity <= (order.quantity_arrived || 0) &&
+        new Date(order.arrivalDate || Infinity) <= new Date(order.requested_date);
+
+      if (isOnTime) onTimeOrders++;
+    }
+
+    const totalAllOrders = allOrders.length;
+    const otifRate = totalAllOrders > 0 ? (onTimeOrders / totalAllOrders) * 100 : 0;
+    const otifRateWarning = otifRate < 97 ? "" : "";
+
+    // Step 2: Paginated query for current page
+    const [orders, total] = await baseOrderQuery
       .orderBy("order.createdAt", "DESC")
       .skip(skip)
       .take(limit)
       .getManyAndCount();
 
+    // Enrich only paginated data
     const enrichedOrders = [];
-
     for (const order of orders) {
       const invoice = await invoiceRepository.findOne({
         where: {
@@ -66,33 +86,41 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
         },
       });
 
-      let shippingRate = null;
-      if (order.requested_date && invoice?.expected_delivery_date) {
-        const requested = new Date(order.requested_date).getTime();
-        const expected = new Date(invoice.expected_delivery_date).getTime();
-        const diffDays = Math.ceil((expected - requested) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays <= 0) {
-          shippingRate = "On Time";
-        } else if (diffDays <= 3) {
-          shippingRate = "Slight Delay";
-        } else {
-          shippingRate = "Delayed";
-        }
-      }
+      const isOnTime =
+        order.ordered_quantity <= (order.quantity_arrived || 0) &&
+        new Date(order.arrivalDate || Infinity) <= new Date(order.requested_date);
 
       enrichedOrders.push({
         ...order,
         invoice: invoice || null,
-        accountStatus: supplier.accountVerified ? "Verified" : "Unverified",
-        shippingRate,
+        orderStatus: isOnTime ? "In tempo" : "Non puntuale",
+        // shippingRate
       });
     }
+    // Shipping Rate as Percentage
+    // let shippingRate = null;
+    // if (order.requested_date && invoice?.expected_delivery_date) {
+    //   const requested = new Date(order.requested_date).getTime();
+    //   const expected = new Date(invoice.expected_delivery_date).getTime();
+    //   const diffDays = Math.ceil((expected - requested) / (1000 * 60 * 60 * 24));
+
+    //   if (diffDays <= 0) {
+    //     shippingRate = 100; // 100% if on time or early
+    //   } else {
+    //     // Decrease percentage linearly; assume 3 days as the threshold for 0%
+    //     const maxDelayThreshold = 3;
+    //     shippingRate = Math.max(0, 100 - ((diffDays - 1) / maxDelayThreshold) * 100);
+    //   }
+    //   shippingRate = Number(shippingRate.toFixed(2)); // Round to 2 decimal places
+    // }
 
     return CommonUtilities.sendResponsData({
       code: 200,
       message: MESSAGES.SUCCESS,
-      data: enrichedOrders,
+      data: {
+        otifRate: `${otifRate.toFixed(2)}%${otifRateWarning}`, //  whole data OTIF
+        orders: enrichedOrders, //  only page data
+      },
       totalRecord: total,
     });
   } catch (error) {

@@ -33,6 +33,9 @@ export class PurchaseOrders {
   @Column({ type: "timestamp", nullable: true })
   arrivalDate: Date;
 
+  @Column({ default: 0 })
+  quantity_arrived: number;
+
   @Column({ default: false })
   isDeleted: boolean;
 
