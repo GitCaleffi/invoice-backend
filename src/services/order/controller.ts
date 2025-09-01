@@ -39,13 +39,13 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
     const search = queryData?.search?.trim()?.toLowerCase();
 
     // Step 1: Base query (without pagination) for OTIF calculation
-    const baseOrderQuery = orderRepository.createQueryBuilder("order")
-      .where("order.supplier_code IN (:...codes)", { codes: supplierCodes })
-      .andWhere("order.isDeleted = :isDeleted", { isDeleted: false });
+    const baseOrderQuery = orderRepository.createQueryBuilder("po")
+      .where("po.supplier_code IN (:...codes)", { codes: supplierCodes })
+      .andWhere("po.isDeleted = :isDeleted", { isDeleted: false });
 
     if (search) {
       baseOrderQuery.andWhere(
-        `(LOWER(order.order_number) ILIKE :search OR LOWER(order.article_code) ILIKE :search)`,
+        `(LOWER(po.order_number) ILIKE :search OR LOWER(po.article_code) ILIKE :search)`,
         { search: `%${search}%` }
       );
     }
@@ -69,7 +69,7 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
 
     // Step 2: Paginated query for current page
     const [orders, total] = await baseOrderQuery
-      .orderBy("order.createdAt", "DESC")
+      .orderBy("po.createdAt", "DESC")
       .skip(skip)
       .take(limit)
       .getManyAndCount();
