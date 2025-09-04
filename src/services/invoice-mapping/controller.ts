@@ -319,7 +319,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         price: item.price || 0,
         currency: item.currency || '',
         description: item.description || '',
-        expected_delivery_date: parseDate(item.expected_delivery_date),
+        expected_delivery_date: item.expected_delivery_date ? parseDate(item.expected_delivery_date) : item.expected_delivery_date,
         supplier_code: item.supplier_code,
         production_lot: item.production_lot || '',
         processed: item.processed || '',

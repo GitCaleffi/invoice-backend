@@ -39,6 +39,9 @@ export class PurchaseOrders {
   @Column({ default: false })
   isDeleted: boolean;
 
+  @Column({ nullable: true })
+  status: string;
+
   @ManyToOne(() => Supplier, { onDelete: "CASCADE" })
   supplier: Supplier; // This will create a `supplierId` column in the database.
 
