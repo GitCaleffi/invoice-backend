@@ -20,7 +20,7 @@ const supplierRepository = AppDataSource.getRepository(Supplier);
 const headerMappingRepo = AppDataSource.getRepository(SupplierInvoicesMapping);
 const poRepo = AppDataSource.getRepository(PurchaseOrders);
 const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
-
+const exceedPercentage = parseFloat(process.env.EXCEED_PERCENTAGE || "1.25"); 
 
 //  get Invoice Mapping list  //
 export const getInvoices = async (token: any, queryData: any, next: NextFunction) => {
@@ -212,7 +212,8 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
     const existingPOs = await poRepo.find({
       where: { supplier_code: In(supplier.supplier_code) },
     });
-    if (!existingPOs || existingPOs.length === 0) {
+
+    if (!existingPOs || (existingPOs.length === 0)) {
       throw new HTTP400Error(
         CommonUtilities.sendResponsData({
           code: 400,
@@ -223,12 +224,11 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
 
     const validRows: any[] = [];
     const invalidRows: any[] = [];
-
+    
     for (let index = 0; index < bodyData.length; index++) {
       const row = bodyData[index];
       const rowIndex = index + 1;
       const rowErrors: any[] = [];
-
       const matchedPO = existingPOs.find(po =>
         po.order_number === String(row.order_number) &&
         po.article_code === String(row.article_code)
@@ -257,11 +257,11 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
 
         const orderedQty = Number(matchedPO.ordered_quantity);
         const uploadedQty = Number(row.quantity);
-        const maxAllowedQty = orderedQty * 1.1;
+        const maxAllowedQty = orderedQty * exceedPercentage;
 
         if (uploadedQty > maxAllowedQty) {
           rowErrors.push({
-            reason: `La quantità supera il limite massimo consentito del 10% (Ordine: ${orderedQty}, Massimo consentito: ${maxAllowedQty.toFixed(2)})`,
+            reason: `La quantità supera il limite massimo consentito del 25% (Ordine: ${orderedQty}, Massimo consentito: ${maxAllowedQty.toFixed(2)})`,
             key: "quantity",
             value: row.quantity,
             order_number: row.order_number,
@@ -294,6 +294,20 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         supplier_code: matchedPO?.supplier_code,
         processed: "true",
         insertion_date: new Date(),
+      });
+    }
+
+    // If there are any invalid rows, return early without saving to the database
+
+    if (invalidRows?.length > 0) {
+      return CommonUtilities.sendResponsData({
+        code: 400,
+        message: "Some rows contain errors. No data was saved.",
+        data: {
+          inserted: 0,
+          failed: invalidRows.length,
+          invalidRows,
+        },
       });
     }
 
