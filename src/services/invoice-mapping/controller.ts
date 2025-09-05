@@ -20,7 +20,7 @@ const supplierRepository = AppDataSource.getRepository(Supplier);
 const headerMappingRepo = AppDataSource.getRepository(SupplierInvoicesMapping);
 const poRepo = AppDataSource.getRepository(PurchaseOrders);
 const invoiceRepo = AppDataSource.getRepository(InvoicesReceived);
-const exceedPercentage = parseFloat(process.env.EXCEED_PERCENTAGE || "1.25"); 
+const exceedPercentage = parseFloat(process.env.EXCEED_PERCENTAGE || "1.25");
 
 //  get Invoice Mapping list  //
 export const getInvoices = async (token: any, queryData: any, next: NextFunction) => {
@@ -56,6 +56,7 @@ export const getInvoices = async (token: any, queryData: any, next: NextFunction
       .addSelect("SUM(invoice.quantity)", "total_quantity")
       .addSelect("SUM(invoice.quantity * invoice.price)", "total_invoiced")
       .addSelect("MAX(invoice.insertion_date)", "latest_insertion_date")
+      .addSelect("MAX(CASE WHEN invoice.isExported THEN 1 ELSE 0 END)", "is_exported")
       .leftJoin("invoice.supplier", "supplier")
       .where("supplier.id = :supplierId", { supplierId: supplier.id })
       .andWhere("invoice.isDeleted = false");
@@ -97,7 +98,10 @@ export const getInvoices = async (token: any, queryData: any, next: NextFunction
       .offset((page - 1) * limit)
       .limit(limit);
 
-    const invoices = await baseQuery.getRawMany();
+    const invoices = (await baseQuery.getRawMany()).map(inv => ({
+      ...inv,
+      is_exported: Boolean(inv.is_exported),
+    }));
 
     return CommonUtilities.sendResponsData({
       code: 200,
@@ -164,6 +168,7 @@ export const getInvoiceDetails = async (token: any, query: any, next: NextFuncti
         isDeleted: false,
         supplier: { id: supplier.id },
       },
+      // relations: ["supplier"],
       order: {
         insertion_date: "DESC",
       },
@@ -224,7 +229,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
 
     const validRows: any[] = [];
     const invalidRows: any[] = [];
-    
+
     for (let index = 0; index < bodyData.length; index++) {
       const row = bodyData[index];
       const rowIndex = index + 1;
@@ -339,6 +344,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         processed: item.processed || '',
         insertion_date: item.insertion_date || new Date(),
         supplier: supplier,
+        isExported: item.isExported ?? false,
       };
 
       try {
@@ -398,6 +404,9 @@ export const addMappedHeaders = async (token: any, bodyData: any, next: NextFunc
           (existingMapping as any)[key] = mapping[key];
         }
       });
+      if (mapping.isExported !== undefined) {
+        existingMapping.isExported = mapping.isExported;
+      }
 
       await headerMappingRepo.save(existingMapping);
     }
@@ -405,6 +414,7 @@ export const addMappedHeaders = async (token: any, bodyData: any, next: NextFunc
       const newMapping = headerMappingRepo.create({
         ...mapping,
         supplier: supplier,
+        isExported: mapping.isExported ?? false,
       });
 
       await headerMappingRepo.save(newMapping);
@@ -558,6 +568,9 @@ export const updateInvoiceById = async (
       production_lot: updatedData.production_lot ?? invoice.production_lot,
       processed: true,
       insertion_date: new Date(),
+      isExported: updatedData.hasOwnProperty('isExported') 
+    ? Boolean(updatedData.isExported) 
+    : invoice.isExported,
     });
 
     const updatedInvoice = await invoiceRepo.save(invoice);

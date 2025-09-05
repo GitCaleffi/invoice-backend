@@ -48,6 +48,9 @@ export class InvoicesReceived {
   @Column({ default: false })
   isDeleted: boolean;
 
+  @Column({ default: false })
+  isExported: boolean;
+
   @ManyToOne(() => Supplier, { onDelete: "CASCADE" })
   supplier: Supplier; // This will create a `supplierId` column in the database.
 

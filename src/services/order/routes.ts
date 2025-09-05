@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import 'dotenv/config';
-import { getOrders } from "./controller";
+import {  getOrderDetails, getOrders } from "./controller";
 import { checkAuthenticate } from "./middleware/check";
 
 const basePath = process.env.BASE_PATH || "/api/v1/";
@@ -21,6 +21,19 @@ export default [
       },
     ],
   },
+
   
+{
+    path: currentPathURL + "/details",
+    method: "get",
+    handler: [
+      checkAuthenticate,
+      async (req: Request, res: Response, next: NextFunction) => {
+        const result = await getOrderDetails(req.get("Authorization"), req.query, next);
+        res.status(200).send(result);
+      },
+    ],
+  },
+
 ];
 

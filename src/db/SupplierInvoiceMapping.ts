@@ -45,6 +45,9 @@ export class SupplierInvoicesMapping {
   @Column({ nullable: true })
   insertion_date: string;
 
+    @Column({ default: false })
+  isExported: boolean;
+
   @Column({ default: false })
   isDeleted: boolean;
 
