@@ -222,7 +222,8 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
       .select("po.order_number", "order_number")
       .addSelect("COUNT(*)", "total_records")
       .addSelect("SUM(po.ordered_quantity)", "ordered_quantity")
-      .addSelect("SUM(po.quantity_arrived)", "quantity_received")
+      // .addSelect("SUM(po.quantity_arrived)", "quantity_received")
+      .addSelect("SUM(COALESCE(po.quantity_arrived,0))", "quantity_received")
       .addSelect("MIN(po.requested_date)", "nearest_requested_date")
       .addSelect(`
         SUM(
