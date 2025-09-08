@@ -236,7 +236,7 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
       .addSelect(`
         SUM(
           CASE 
-            WHEN LOWER(COALESCE(po.status, 'Open')) = 'closed' THEN 1 
+            WHEN LOWER(COALESCE(po.status, 'open')) = 'close' THEN 1 
             ELSE 0 
           END
         )
