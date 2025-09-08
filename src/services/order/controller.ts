@@ -267,7 +267,22 @@ export const getOrders = async (token: any, queryData: any, res: Response, next:
 
       const orderOTIF = totalRecords > 0 ? (onTimeCount / totalRecords) * 100 : 0;
 
-      const deliveryStatus = onTimeCount === totalRecords ? "In tempo" : "Tardi";
+      // const deliveryStatus = onTimeCount === totalRecords ? "In tempo" : "Tardi";
+
+      let deliveryStatus = "Tardi"; // default
+      if (onTimeCount === totalRecords) {
+        deliveryStatus = "In tempo";
+      } else if (!g.nearest_requested_date || g.nearest_requested_date === null) {
+        deliveryStatus = "Tardi";
+      } else {
+        const reqDate = new Date(g.nearest_requested_date);
+        const now = new Date();
+        // arrivalDate missing check
+        if (!g.arrivaldate && reqDate > now) {
+          deliveryStatus = "ordine da evadere"; // pending status
+        }
+      }
+
       const orderStatus = closedCount === totalRecords ? "Chiuso" : "Aprire";
 
       return {
@@ -367,13 +382,21 @@ export const getOrderDetails = async (token: any, query: any, next: NextFunction
     // Transform line items
     const lineItems = records.map((r, index) => {
       // Debug logging with index to track records
-      console.log(`Record ${index} - arrivalDate: ${r.arrivalDate}, requested_date: ${r.requested_date}`);
-      const isOnTime =
-        (r.quantity_arrived !== null && r.quantity_arrived >= r.ordered_quantity) &&
-        (r.arrivalDate && r.arrivalDate <= r.requested_date);
-      console.log(`Record ${index} - isOnTime for ${r.article_code}: ${isOnTime}`);
-      const deliveryStatus = isOnTime ? "In tempo" : "Tardi";
+      // const isOnTime =
+      //   (r.quantity_arrived !== null && r.quantity_arrived >= r.ordered_quantity) &&
+      //   (r.arrivalDate && r.arrivalDate <= r.requested_date);
+      // const deliveryStatus = isOnTime ? "In tempo" : "Tardi";
+      const now = new Date();
+      let deliveryStatus = "Tardi";
+
+      if (r.arrivalDate && r.quantity_arrived !== null && r.quantity_arrived >= r.ordered_quantity && r.arrivalDate <= r.requested_date) {
+        deliveryStatus = "In tempo";
+      } else if (!r.arrivalDate && r.requested_date && new Date(r.requested_date) > now) {
+        deliveryStatus = "ordine da evadere";
+      }
+
       console.log(`Record ${index} - deliveryStatus for ${r.article_code}: ${deliveryStatus}`);
+
 
       return {
         article_code: r.article_code,
