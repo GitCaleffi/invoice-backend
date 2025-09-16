@@ -323,6 +323,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         where: {
           invoice_number: invoice_number_str,
           order_number: item.order_number,
+          article_code: item.article_code,
           supplier: { id: supplier.id },
           isDeleted: false,
         },
