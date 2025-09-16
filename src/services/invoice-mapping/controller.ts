@@ -338,7 +338,7 @@ export const uploadInvoiceCsv = async (token: any, bodyData: any, next: NextFunc
         price: item.price || 0,
         currency: item.currency || '',
         description: item.description || '',
-        expected_delivery_date: item.expected_delivery_date ? parseDate(item.expected_delivery_date) : item.expected_delivery_date,
+        expected_delivery_date: item.expected_delivery_date ? parseDate(item.expected_delivery_date) : item.expected_delivery_date || null,
         supplier_code: item.supplier_code,
         production_lot: item.production_lot || '',
         processed: item.processed || '',
@@ -560,7 +560,7 @@ export const updateInvoiceById = async (
       description: updatedData.description ?? invoice.description,
       expected_delivery_date: updatedData.expected_delivery_date
         ? new Date(updatedData.expected_delivery_date)
-        : invoice.expected_delivery_date,
+        : invoice.expected_delivery_date || null,
       invoice_date: updatedData.invoice_date
         ? new Date(updatedData.invoice_date)
         : invoice.invoice_date,
